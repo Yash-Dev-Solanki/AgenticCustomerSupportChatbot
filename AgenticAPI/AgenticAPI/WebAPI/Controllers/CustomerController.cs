@@ -9,7 +9,9 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using AgenticAPI.Application.CreateCustomer;
 using AgenticAPI.Application.GetCustomerById;
 using AgenticAPI.Domain;
-using AgenticAPI.Application.UpdateCustomer.UpdateEmailAddress;
+using AgenticAPI.Application.UpdateCustomer;
+using System.ComponentModel.DataAnnotations;
+using MongoDB.Bson;
 
 namespace AgenticAPI.WebAPI.Controllers
 {
@@ -35,15 +37,22 @@ namespace AgenticAPI.WebAPI.Controllers
         [ActionName("CreateCustomer")]
         public async Task<IActionResult> Post([FromBody] CreateCustomerRawRequestModel request)
         {
-            var response = await _mediator.Send(request);
+            try
+            {
+                var response = await _mediator.Send(request);
 
-            if (response.StatusCode == HttpStatusCode.Created)
-            {
-                return Created("Customer created", response);
+                if (response.StatusCode == HttpStatusCode.Created)
+                {
+                    return Created("Customer created", response);
+                }
+                else
+                {
+                    return StatusCode(500, "Could not access DB");
+                }
             }
-            else 
+            catch (Exception ex)
             {
-                return StatusCode(500, "Could not access DB");
+                return StatusCode(500, new { error = "Internal Server Error", message = ex.StackTrace });
             }
         }
 
@@ -52,22 +61,29 @@ namespace AgenticAPI.WebAPI.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         [ActionName("GetCustomerById")]
-        public async Task<IActionResult> Get([FromHeader] string customerId)
+        public async Task<IActionResult> Get([FromHeader] [Required] string customerId)
         {
-            var request = new GetCustomerRawRequestModel { CustomerId = customerId };
-            var response = await _mediator.Send(request);
+            try
+            {
+                var request = new GetCustomerRawRequestModel { CustomerId = customerId };
+                var response = await _mediator.Send(request);
 
-            if (response.StatusCode == HttpStatusCode.OK)
-            {
-                return Ok(response);
+                if (response.StatusCode == HttpStatusCode.OK)
+                {
+                    return Ok(response);
+                }
+                else if (response.StatusCode == HttpStatusCode.BadRequest)
+                {
+                    return BadRequest(response);
+                }
+                else
+                {
+                    return StatusCode(500, "Could not access DB");
+                }
             }
-            else if (response.StatusCode == HttpStatusCode.BadRequest)
+            catch (Exception ex)
             {
-                return BadRequest(response);
-            }
-            else
-            {
-                return StatusCode(500, "Could not access DB");
+                return StatusCode(500, new { error = "Internal Server Error", message = ex.StackTrace });
             }
         }
 
@@ -76,24 +92,100 @@ namespace AgenticAPI.WebAPI.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         [ActionName("UpdateCustomerEmailAddress")]
-        public async Task<IActionResult> UpdateEmail([FromHeader] string customerId, [FromHeader] string newEmailAddress)
+        public async Task<IActionResult> UpdateEmail([FromHeader][Required] string customerId, [FromHeader][Required] string newEmailAddress)
         {
-            var request = new UpdateEmailAddressRequestModel();
-            request.CustomerId = customerId;
-            request.EmailAddress = newEmailAddress;
-            var response = await _mediator.Send(request);
+            try
+            {
+                var request = new UpdateCustomerRequestModel();
+                request.CustomerId = customerId;
+                request.updatedField = "EmailAddress";
+                request.updatedValue = newEmailAddress;
+                var response = await _mediator.Send(request);
 
-            if (response.StatusCode == HttpStatusCode.Accepted)
-            {
-                return Accepted(response);
+                if (response.StatusCode == HttpStatusCode.Accepted)
+                {
+                    return Accepted(response);
+                }
+                else if (response.StatusCode == HttpStatusCode.BadRequest)
+                {
+                    return BadRequest(response);
+                }
+                else
+                {
+                    return StatusCode(500, "Could not access DB");
+                }
             }
-            else if (response.StatusCode == HttpStatusCode.BadRequest)
+            catch (Exception ex)
             {
-                return BadRequest(response);
+                return StatusCode(500, new { error = "Internal Server Error", message = ex.StackTrace });
             }
-            else
+        }
+
+        [HttpPost("UpdatePaymentReminder")]
+        [ProducesResponseType(StatusCodes.Status202Accepted)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ActionName("CustomerPaymentReminder")]
+        public async Task<IActionResult> UpdatePaymentReminder([FromHeader][Required] string customerId, [FromHeader][Required] bool newPaymentReminder)
+        {
+            try
             {
-                return StatusCode(500, "Could not access DB");
+                var request = new UpdateCustomerRequestModel();
+                request.CustomerId = customerId;
+                request.updatedField = "PaymentReminder";
+                request.updatedValue = newPaymentReminder;
+                var response = await _mediator.Send(request);
+
+                if (response.StatusCode == HttpStatusCode.Accepted)
+                {
+                    return Accepted(response);
+                }
+                else if (response.StatusCode == HttpStatusCode.BadRequest)
+                {
+                    return BadRequest(response);
+                }
+                else
+                {
+                    return StatusCode(500, "Could not access DB");
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = "Internal Server Error", message = ex.StackTrace });
+            }
+        }
+
+        [HttpPost("UpdatePhoneInfo")]
+        [ProducesResponseType(StatusCodes.Status202Accepted)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ActionName("CustomerPhoneInfo")]
+        public async Task<IActionResult> UpdatePhoneInfo([FromHeader][Required] string customerId, [FromBody] PhoneInfo newPhoneInfo)
+        {
+            try
+            {
+                var request = new UpdateCustomerRequestModel();
+                request.CustomerId = request.CustomerId = customerId;
+                request.updatedField = "PhoneInfo";
+                request.updatedValue = newPhoneInfo.ToBsonDocument();
+                var response = await _mediator.Send(request);
+
+                if (response.StatusCode == HttpStatusCode.Accepted)
+                {
+                    return Accepted(response);
+                }
+                else if (response.StatusCode == HttpStatusCode.BadRequest)
+                {
+                    return BadRequest(response);
+                }
+                else
+                {
+                    return StatusCode(500, "Could not access DB");
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = "Internal Server Error", message = ex.StackTrace });
             }
         }
     }

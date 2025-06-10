@@ -22,7 +22,7 @@ namespace AgenticAPI.Application.GetCustomerById
             try
             {
                 Console.WriteLine($"Fetching {request.CustomerId}");
-                var searchResult = await _mongoService.GetCustomerById(request.CustomerId!);
+                var searchResult = await _mongoService.GetCustomerByID(request.CustomerId!);
 
                 if (searchResult == null)
                 {

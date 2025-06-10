@@ -18,10 +18,32 @@ namespace AgenticAPI.Application.CreateCustomer
             _mongoService = mongoService;
         }
 
+        public async Task<string> GenerateCustomerId()
+        {
+            while (true)
+            {
+                Random random = new Random();
+                string customerId = random.Next(500000, 600000).ToString();
+                try
+                {
+                    var checkUnique = await _mongoService.GetCustomerByID(customerId);
+                    if (checkUnique == null)
+                    {
+                        return customerId;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+            } 
+        }
+        
+        
         public async Task<CreateCustomerResponseModel> Handle(CreateCustomerRawRequestModel request, CancellationToken cancellationToken)
         {
             Customer customer = _mapper.Map<Customer>(request);
-            customer.CustomerId = Guid.NewGuid().ToString();
+            customer.CustomerId = await GenerateCustomerId();
             customer.Notes = new List<string>();
             customer.Notes.Add($"Customer created successfully at {customer.CreatedOn}");
             var result = await _mongoService.AddCustomer(customer);
@@ -41,7 +63,7 @@ namespace AgenticAPI.Application.CreateCustomer
                 response.StatusCode = HttpStatusCode.Created;
             }
 
-                return response;
+            return response;
         }
     }
 }

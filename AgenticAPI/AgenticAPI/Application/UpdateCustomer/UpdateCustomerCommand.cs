@@ -5,32 +5,32 @@ using MongoDB.Bson.Serialization;
 using System;
 using System.Net;
 
-namespace AgenticAPI.Application.UpdateCustomer.UpdateEmailAddress
+namespace AgenticAPI.Application.UpdateCustomer
 {
-    public class UpdateEmailAddressCommand : IRequestHandler<UpdateEmailAddressRequestModel, UpdateEmailAddressResponseModel>
+    public class UpdateCustomerCommand : IRequestHandler<UpdateCustomerRequestModel, UpdateCustomerResponseModel>
     {
         public IMongoService _mongoService;
 
-        public UpdateEmailAddressCommand(IMongoService mongoService)
+        public UpdateCustomerCommand(IMongoService mongoService)
         {
             _mongoService = mongoService;
         }
-        public async Task<UpdateEmailAddressResponseModel> Handle(UpdateEmailAddressRequestModel request, CancellationToken cancellationToken)
+        public async Task<UpdateCustomerResponseModel> Handle(UpdateCustomerRequestModel request, CancellationToken cancellationToken)
         {
-            var response = new UpdateEmailAddressResponseModel();
+            var response = new UpdateCustomerResponseModel();
 
             try
             {
-                var result = await _mongoService.UpdateCustomer(request.CustomerId!, "EmailAddress", request.EmailAddress!);
+                var result = await _mongoService.UpdateCustomer(request.CustomerId!, request.updatedField!, request.updatedValue!);
 
                 response.Customer = BsonSerializer.Deserialize<Customer>(result);
                 response.StatusCode = HttpStatusCode.Accepted;
             }
-            catch (ArgumentOutOfRangeException)
+            catch (ArgumentOutOfRangeException ex)
             {
                 response.Success = false;
                 response.StatusCode = HttpStatusCode.BadRequest;
-                response.Errors!.Add("Customer Id not found");
+                response.Errors!.Add(ex.Message);
             }
             catch (Exception ex)
             {

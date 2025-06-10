@@ -25,7 +25,7 @@ namespace AgenticAPI.Infrastructure
             }
         }
 
-        public async Task<BsonDocument?> GetCustomerById(string customerId)
+        public async Task<BsonDocument?> GetCustomerByID(string customerId)
         {
             try
             {
@@ -59,7 +59,7 @@ namespace AgenticAPI.Infrastructure
         {
             try
             {
-                var customer = await GetCustomerById(customerId);
+                var customer = await GetCustomerByID(customerId);
                 if (customer == null)
                 {
                     throw new ArgumentOutOfRangeException("Customer Id Not found");
