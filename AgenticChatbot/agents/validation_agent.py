@@ -5,11 +5,9 @@ from langgraph.graph.graph import CompiledGraph
 from tools.customer_id_validation import validate_customer_id
 from models.graphState import GraphState
 
-model = ChatOpenAI(model= "gpt-4o-mini",
+model = ChatOpenAI(model= "gpt-4o",
                    temperature= 0,
                    streaming= True)
-
-tools = [validate_customer_id]
 
 
 def get_validation_agent() -> CompiledGraph:
@@ -35,7 +33,7 @@ def get_validation_agent() -> CompiledGraph:
             """
         ),
         name= "validation_agent",
-        state_schema= GraphState
+        state_schema= GraphState,
     )
 
     return agent

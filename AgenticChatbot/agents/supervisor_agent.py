@@ -14,7 +14,7 @@ from typing import (
 
 from models.graphState import GraphState
 
-model = ChatOpenAI(model= "gpt-4o-mini",
+model = ChatOpenAI(model= "gpt-4o",
                    temperature= 0,
                    streaming= True)
 
@@ -48,11 +48,12 @@ def create_handoff_tool(*, agent_name: str, description: str | None = None):
 # Handoff Tools
 assign_to_validation_agent = create_handoff_tool(agent_name= "validation_agent", description= "Assign task to a validation agent")
 assign_to_update_agent = create_handoff_tool(agent_name= "update_agent", description= "Assign task to a update agent")
+assign_to_query_agent = create_handoff_tool(agent_name= "query_agent", description= "Assign task to query agent")
 
 def get_supervisor_agent(members: List[str]) -> CompiledGraph:
     supervisor_agent = create_react_agent(
         model= model,
-        tools= [assign_to_validation_agent, assign_to_update_agent],
+        tools= [assign_to_validation_agent, assign_to_update_agent, assign_to_query_agent],
         prompt = (
             f"""
             You're a supervisor tasked with managing conversation between the following workers: {members}
@@ -61,9 +62,9 @@ def get_supervisor_agent(members: List[str]) -> CompiledGraph:
             - a validation agent: Perform customer validation on the basis of customer Id provided by the user.
             - an updation agent: Perform updates to customer data stored in the collection. 
 
-            Assign work to one agent at a time, do not call agents in parallel.
-            Do not do any work yourself. 
-            Importantly, any request for update to customer details, the provided customer Id must first be validated.
+            Important Rules:
+            1. Do not do any work yourself. 
+            2. Check current state for validated field. If validated is None, perform validation. Else if validated is True, proceed with requested operation. If validated is False, end the conversation citing reason for end.
             """   
         ),
         name= "supervisor",

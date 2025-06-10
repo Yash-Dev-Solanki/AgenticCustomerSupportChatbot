@@ -35,12 +35,6 @@ def validate_customer_id(customer_id: str, tool_call_id: Annotated[str, Injected
     headers = {"customerId": customer_id}
     response = requests.get(Endpoints.GET_CUSTOMER_BY_ID, headers= headers, verify= False)
 
-    new_state = {
-        "messages": state["messages"].copy(),  # Copy existing messages
-        "customer": state.get("customer"),     # Keep existing customer
-        "validated": state.get("validated", False)  # Keep existing validated status
-    }
-
     if response.status_code == 200:
         customer = Customer(**response.json()['customer'])
         tool_content = f"The customer was succesfully validated. Name: {customer.customerName} with CustomerId: {customer.customerId}"
@@ -58,10 +52,6 @@ def validate_customer_id(customer_id: str, tool_call_id: Annotated[str, Injected
         errors = '\t'.join(response.json()['errors'])
         tool_content =  f"The customer could not be validated. Status code: {status}. Errors: {errors}"
         tool_message = ToolMessage(content= tool_content, tool_call_id= tool_call_id)
-        
-        new_state["messages"].append(tool_message)
-        new_state["customer"] = None
-        new_state["validated"] = False
         
         command = Command(update= {
             "messages": [
