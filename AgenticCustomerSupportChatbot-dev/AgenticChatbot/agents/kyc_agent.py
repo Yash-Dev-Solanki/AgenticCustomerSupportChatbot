@@ -13,16 +13,13 @@ from langchain_core.tools import tool, InjectedToolCallId
 from langchain_core.messages.tool import ToolMessage
 from langgraph.types import Command
 from langgraph.prebuilt import InjectedState
+from dotenv import load_dotenv
 import os
 
 VECTORSTORE_PATH = "../vectorstore/kyc_store"
 
-os.environ["OPENAI_API_KEY"] = ""
-
-import sys
-
-# Add the project root to sys.path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+load_dotenv()
+os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
 
 embedding_function = OpenAIEmbeddings()
 vectorstore = Chroma(persist_directory=VECTORSTORE_PATH, embedding_function=embedding_function)
@@ -71,8 +68,8 @@ def ask_kyc(question):
 @tool(parse_docstring=True)
 def kyc_tool(
     question: str,
-    tool_call_id: Annotated[str, InjectedToolCallId], 
-    state: Annotated[Dict[str, Any], InjectedState],    
+    state: Annotated[Dict[str, Any], InjectedState],
+    tool_call_id: Annotated[str, InjectedToolCallId],     
 ) -> Command:  
     """
         Answers kyc-related questions using the QA chain.
@@ -104,7 +101,7 @@ def kyc_tool(
         }
     )
 
-def create_profile_agent() -> CompiledGraph:
+def create_kyc_agent() -> CompiledGraph:
     return create_react_agent(
         model=model,
         tools=[kyc_tool],

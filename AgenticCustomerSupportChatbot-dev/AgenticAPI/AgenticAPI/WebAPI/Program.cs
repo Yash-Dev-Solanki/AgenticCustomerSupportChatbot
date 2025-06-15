@@ -21,6 +21,7 @@ builder.Services.AddMediatR(cfg =>
 });
 builder.Services.AddAutoMapper(typeof(MapperProfile));
 builder.Services.AddSingleton<IMongoService, MongoService>();
+builder.Services.AddSingleton<IChatService, ChatService>();
 
 var app = builder.Build();
 

@@ -8,16 +8,18 @@ from langgraph.prebuilt import create_react_agent
 from langgraph.graph.graph import CompiledGraph
 from models.graphState import GraphState
 from langchain_core.tools import tool
+from typing import Annotated, Dict, Any
+from langchain_core.tools import tool, InjectedToolCallId
+from langchain_core.messages.tool import ToolMessage
+from langgraph.types import Command
+from langgraph.prebuilt import InjectedState
 from dotenv import load_dotenv
 import os
 
 VECTORSTORE_PATH = "../vectorstore/payments_store"
-load_dotenv()
-openai_key = os.getenv("OPENAI_API_KEY")
-import sys
 
-# Add the project root to sys.path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+load_dotenv()
+os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
 
 embedding_function = OpenAIEmbeddings()
 vectorstore = Chroma(persist_directory=VECTORSTORE_PATH, embedding_function=embedding_function)
@@ -27,7 +29,6 @@ memory = ConversationBufferMemory(memory_key="chat_history", return_messages=Tru
 model = ChatOpenAI(model= "gpt-4o",
                    temperature= 0,
                    streaming= True)
-print("payments_agent.py loaded")
 
 
 CUSTOM_PROMPT = """
@@ -63,17 +64,12 @@ def ask_payments(question):
     print(f"ask_payments got result: {result}")
     return result["answer"]
 
-from typing import Annotated, Dict, Any
-from langchain_core.tools import tool, InjectedToolCallId
-from langchain_core.messages.tool import ToolMessage
-from langgraph.types import Command
-from langgraph.prebuilt import InjectedState
 
 @tool(parse_docstring=True)
 def payments_tool(
     question: str,
-    tool_call_id: Annotated[str, InjectedToolCallId], 
-    state: Annotated[Dict[str, Any], InjectedState],    
+    state: Annotated[Dict[str, Any], InjectedState],
+    tool_call_id: Annotated[str, InjectedToolCallId],     
 ) -> Command:  
     """
         Answers payment-related questions using the QA chain.
