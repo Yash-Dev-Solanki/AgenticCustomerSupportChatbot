@@ -16,7 +16,6 @@ import ssl
 import urllib3
 urllib3.disable_warnings()
 
-
 @tool(parse_docstring= True)
 def validate_customer_id(customer_id: str, tool_call_id: Annotated[str, InjectedToolCallId], state: Annotated[Dict[str, Any], InjectedState]) -> Command:
     """
