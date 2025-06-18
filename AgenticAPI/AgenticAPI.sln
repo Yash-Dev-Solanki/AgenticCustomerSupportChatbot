@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.13.35828.75 d17.13
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgenticAPI", "AgenticAPI\AgenticAPI.csproj", "{DEA2BF48-CFDA-4BF4-A7AE-B8C4271CB13D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DEA2BF48-CFDA-4BF4-A7AE-B8C4271CB13D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DEA2BF48-CFDA-4BF4-A7AE-B8C4271CB13D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DEA2BF48-CFDA-4BF4-A7AE-B8C4271CB13D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DEA2BF48-CFDA-4BF4-A7AE-B8C4271CB13D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {E4B9659C-1AEA-4CF2-9F48-A8C14ABD514A}
+	EndGlobalSection
+EndGlobal
