@@ -3,10 +3,16 @@ from langchain_openai import ChatOpenAI
 
 from tools.customer_update import *
 from models.graphState import GraphState
+from pydantic import SecretStr
+from dotenv import load_dotenv
+import os
 
+load_dotenv()
 model = ChatOpenAI(model= "gpt-4o",
                    temperature= 0,
-                   streaming= True)
+                   streaming= True,
+                   api_key= SecretStr(os.getenv('OPENAI_API_KEY', ''))
+        )
 
 
 def get_update_agent():

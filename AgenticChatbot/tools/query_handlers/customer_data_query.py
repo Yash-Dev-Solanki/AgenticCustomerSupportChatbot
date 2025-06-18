@@ -144,6 +144,7 @@ def process_customer_data_query(user_query: str, state: Annotated[Dict[str, Any]
         user_query (str): the user query that needs to be processed by the tool
         state: A state object containing relevant metadata that serves as short-term memory checkpointer for the agent
     """
+    print("Processing customer query")
     workflow = StateGraph(QueryState)
 
     workflow.add_node("generate_output", generate_answer)

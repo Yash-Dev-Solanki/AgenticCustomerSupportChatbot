@@ -4,19 +4,23 @@ from langgraph.prebuilt import InjectedState, create_react_agent
 from langchain_core.tools import tool, InjectedToolCallId
 from langgraph.types import Command
 from langchain_core.messages.tool import ToolMessage
-
 from typing import (
     List,
     Annotated,
     Dict, 
     Any
 )
-
+from pydantic import SecretStr
+from dotenv import load_dotenv
+import os
 from models.graphState import GraphState
 
+load_dotenv()
 model = ChatOpenAI(model= "gpt-4o",
                    temperature= 0,
-                   streaming= True)
+                   streaming= True,
+                   api_key= SecretStr(os.getenv('OPENAI_API_KEY', ''))
+        )
 
 
 def create_handoff_tool(*, agent_name: str, description: str | None = None):
@@ -61,6 +65,7 @@ def get_supervisor_agent(members: List[str]) -> CompiledGraph:
             The workers can perform the following tasks:
             - a validation agent: Perform customer validation on the basis of customer Id provided by the user.
             - an updation agent: Perform updates to customer data stored in the collection. 
+            - a query agent: Retrieve responses to user queries from policy documents
 
             Important Rules:
             1. Do not do any work yourself. 

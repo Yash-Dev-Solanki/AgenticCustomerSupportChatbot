@@ -4,10 +4,16 @@ from langgraph.graph.graph import CompiledGraph
 
 from tools.customer_id_validation import validate_customer_id
 from models.graphState import GraphState
+from pydantic import SecretStr
+from dotenv import load_dotenv
+import os
 
+load_dotenv()
 model = ChatOpenAI(model= "gpt-4o",
                    temperature= 0,
-                   streaming= True)
+                   streaming= True,
+                   api_key= SecretStr(os.getenv('OPENAI_API_KEY', ''))
+        )
 
 
 def get_validation_agent() -> CompiledGraph:
