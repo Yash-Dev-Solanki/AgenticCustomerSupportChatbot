@@ -20,7 +20,10 @@ builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(Program).Assembly);
 });
 builder.Services.AddAutoMapper(typeof(MapperProfile));
+builder.Services.AddAutoMapper(typeof(LoanMappingProfile));
 builder.Services.AddSingleton<IMongoService, MongoService>();
+builder.Services.AddSingleton<IChatService, ChatService>();
+builder.Services.AddSingleton<ILoanService, LoanService>();
 
 var app = builder.Build();
 

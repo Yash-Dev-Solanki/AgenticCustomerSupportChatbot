@@ -38,7 +38,7 @@ def create_handoff_tool(*, agent_name: str, description: str | None = None):
         )
 
         print(f"Handing Off to {name}")
-
+        
         return Command(
             goto= agent_name,
             update= {"messages": state["messages"] + [tool_message]},
@@ -53,6 +53,9 @@ def create_handoff_tool(*, agent_name: str, description: str | None = None):
 assign_to_validation_agent = create_handoff_tool(agent_name= "validation_agent", description= "Assign task to a validation agent")
 assign_to_update_agent = create_handoff_tool(agent_name= "update_agent", description= "Assign task to a update agent")
 assign_to_query_agent = create_handoff_tool(agent_name= "query_agent", description= "Assign task to query agent")
+assign_to_payments_agent = create_handoff_tool(agent_name= "payments_agent", description= "Assign task to payments agent")
+assign_to_profile_agent = create_handoff_tool(agent_name= "profile_agent", description= "Assign task to profile agent")
+assign_to_kyc_agent = create_handoff_tool(agent_name= "kyc_agent", description= "Assign task to kyc agent")
 
 def get_supervisor_agent(members: List[str]) -> CompiledGraph:
     supervisor_agent = create_react_agent(
