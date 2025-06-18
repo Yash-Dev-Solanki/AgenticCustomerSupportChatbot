@@ -604,3 +604,4 @@ FodyWeavers.xsd
 **/appsettings.Local.json
 /AgenticChatbot/*.env
 /AgenticAPI/AgenticAPI/appsettings.Development.json
+/AgenticAPI/AgenticAPI/appsettings.Development.json
