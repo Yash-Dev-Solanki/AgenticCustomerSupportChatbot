@@ -9,10 +9,10 @@ from tqdm import tqdm
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-
+from dotenv import load_dotenv
 import os
-os.environ["OPENAI_API_KEY"] = "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"
-
+load_dotenv()
+os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # utils folder
 BASE_PATH = os.path.abspath(os.path.join(BASE_DIR, "..", "data"))
