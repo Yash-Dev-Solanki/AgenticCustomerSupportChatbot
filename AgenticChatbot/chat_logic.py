@@ -19,15 +19,28 @@ def fetch_all_chats(customer_id):
 def fetch_chat_messages(customer_id, chat_id):
     if not customer_id or not chat_id:
         return []
+
     url = f"http://localhost:5142/api/Chat/{customer_id}/{chat_id}"
     try:
         response = requests.get(url)
         response.raise_for_status()
         chat = response.json()
-        return chat.get("messages", [])
+        messages = chat.get("messages", [])
+
+        # Normalize and filter messages that actually have content
+        filtered_messages = []
+        for msg in messages:
+            content = msg.get("message") or msg.get("content") or ""
+            if content.strip():
+                # Keep the full message object but with validated content
+                msg["content"] = content.strip()
+                filtered_messages.append(msg)
+
+        return filtered_messages
     except requests.RequestException as e:
         print(f"[ERROR] fetch_chat_messages: {e}")
         return []
+
 
 import requests
 from datetime import datetime

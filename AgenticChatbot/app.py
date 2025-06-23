@@ -7,11 +7,9 @@ from langchain_core.messages import AIMessage, HumanMessage
 
 from graph import build_model, invoke_model
 from speech_processing import recognize_from_microphone
-from utils.vectorize import vectorize_all_domains_at_startup
 
 from chat_logic import fetch_all_chats, fetch_chat_messages, save_chat_messages, create_new_chat
 
-vectorize_all_domains_at_startup()
 
 def handle_prompt(prompt: str):
     if "current_chat_id" not in st.session_state or not st.session_state.current_chat_id:
@@ -35,16 +33,40 @@ def handle_prompt(prompt: str):
     st.session_state.state["messages"].append(ai_msg)
     st.session_state.messages.append({"role": "assistant", "content": ai_msg.content})
     st.session_state.to_be_saved_messages = st.session_state.messages.copy()
-
+    save_chat_messages(
+    st.session_state.current_chat_id,
+    st.session_state.state["customer"]["customerId"],
+    st.session_state.to_be_saved_messages
+    )
+    st.session_state.chats = load_chats(st.session_state.state["customer"]["customerId"])
     st.rerun()
 
 
 def load_chats(customer_id):
     if not customer_id:
         return []
-    chats = fetch_all_chats(customer_id)
 
-    return sorted(chats or [], key=lambda c: c.get("createdAt", c.get("chatId", "")), reverse=True)
+    chats = fetch_all_chats(customer_id)
+    if not chats:
+        return []
+
+    # Filter chats to include only those that have at least one non-empty message
+    valid_chats = []
+    for chat in chats:
+        chat_id = chat.get("chatId")
+        if not chat_id:
+            continue
+
+        messages = fetch_chat_messages(customer_id, chat_id)
+
+        # Filter out chats with no non-empty messages
+        for msg in messages:
+            content = msg.get("message") or msg.get("content") or ""
+            if content.strip():  # if any valid message found
+                valid_chats.append(chat)
+                break
+
+    return sorted(valid_chats, key=lambda c: c.get("createdAt", c.get("chatId", "")), reverse=True)
 
 def load_chat_messages_to_state(messages):
     converted = []

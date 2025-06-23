@@ -29,7 +29,7 @@ def create_handoff_tool(*, agent_name: str, description: str | None = None):
 
     @tool(name, description= description) 
     def handoff_tool(
-        state: Annotated[Dict[str, Any], InjectedState], tool_call_id: Annotated[str, InjectedToolCallId]
+        tool_call_id: Annotated[str, InjectedToolCallId],state: Annotated[Dict[str, Any], InjectedState]
     ) -> Command:
         tool_message = ToolMessage(
             content = f"Successfully transferred to {agent_name}",
@@ -56,23 +56,27 @@ assign_to_query_agent = create_handoff_tool(agent_name= "query_agent", descripti
 assign_to_payments_agent = create_handoff_tool(agent_name= "payments_agent", description= "Assign task to payments agent")
 assign_to_profile_agent = create_handoff_tool(agent_name= "profile_agent", description= "Assign task to profile agent")
 assign_to_kyc_agent = create_handoff_tool(agent_name= "kyc_agent", description= "Assign task to kyc agent")
+assign_to_loan_statement_agent = create_handoff_tool(
+    agent_name="loan_statement_agent",
+    description="Get the user's loan statement (optionally filtered by date range)"
+)
 
 def get_supervisor_agent(members: List[str]) -> CompiledGraph:
     supervisor_agent = create_react_agent(
         model= model,
-        tools= [assign_to_validation_agent, assign_to_update_agent, assign_to_query_agent],
+        tools= [ assign_to_update_agent, assign_to_query_agent,assign_to_loan_statement_agent],
         prompt = (
             f"""
             You're a supervisor tasked with managing conversation between the following workers: {members}
 
             The workers can perform the following tasks:
-            - a validation agent: Perform customer validation on the basis of customer Id provided by the user.
             - an updation agent: Perform updates to customer data stored in the collection. 
             - a query agent: Retrieve responses to user queries from policy documents
+            - a loan statement agent: Provide loan statements to the user, optionally filtered by date ranges specified by the user.
 
             Important Rules:
             1. Do not do any work yourself. 
-            2. Check current state for validated field. If validated is None, perform validation. Else if validated is True, proceed with requested operation. If validated is False, end the conversation citing reason for end.
+            
             """   
         ),
         name= "supervisor",

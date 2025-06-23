@@ -14,8 +14,6 @@ namespace AgenticAPI.Domain
         public string LoanAccountNumber { get; set; }
         public DateTime PaymentDate { get; set; }
         public double AmountPaid { get; set; }
-        public double Principal { get; set; }
-        public double Interest { get; set; }
         public string PaymentMode { get; set; }
         public string Status { get; set; }
         public string TransactionId { get; set; }
