@@ -4,10 +4,10 @@ import os
 import streamlit as st
 import streamlit_extras.stateful_button as stx
 from langchain_core.messages import AIMessage, HumanMessage
-
+import re
 from graph import build_model, invoke_model
 from speech_processing import recognize_from_microphone
-
+from pdf_generation import generate_loan_statement_pdf
 from chat_logic import fetch_all_chats, fetch_chat_messages, save_chat_messages, create_new_chat
 
 
@@ -34,11 +34,12 @@ def handle_prompt(prompt: str):
     st.session_state.messages.append({"role": "assistant", "content": ai_msg.content})
     st.session_state.to_be_saved_messages = st.session_state.messages.copy()
     save_chat_messages(
-    st.session_state.current_chat_id,
-    st.session_state.state["customer"]["customerId"],
-    st.session_state.to_be_saved_messages
+        st.session_state.current_chat_id,
+        st.session_state.state["customer"]["customerId"],
+        st.session_state.to_be_saved_messages
     )
     st.session_state.chats = load_chats(st.session_state.state["customer"]["customerId"])
+    st.session_state.to_be_saved_messages = []
     st.rerun()
 
 
@@ -50,7 +51,6 @@ def load_chats(customer_id):
     if not chats:
         return []
 
-    # Filter chats to include only those that have at least one non-empty message
     valid_chats = []
     for chat in chats:
         chat_id = chat.get("chatId")
@@ -58,11 +58,9 @@ def load_chats(customer_id):
             continue
 
         messages = fetch_chat_messages(customer_id, chat_id)
-
-        # Filter out chats with no non-empty messages
         for msg in messages:
             content = msg.get("message") or msg.get("content") or ""
-            if content.strip():  # if any valid message found
+            if content.strip():  
                 valid_chats.append(chat)
                 break
 
@@ -112,6 +110,7 @@ def run_app():
                     customer_id_input,
                     st.session_state.to_be_saved_messages
                 )
+                st.session_state.to_be_saved_messages = []
 
             st.session_state.current_chat_id = None
             st.session_state.messages = [{"role": "assistant", "content": "How May I Help You?"}]
@@ -127,18 +126,33 @@ def run_app():
                         customer_id_input,
                         st.session_state.to_be_saved_messages
                     )
-
+                    st.session_state.to_be_saved_messages = []
                 st.session_state.current_chat_id = chat["chatId"]
                 messages = fetch_chat_messages(customer_id_input, chat["chatId"])
                 st.session_state.messages = messages if messages else []
                 st.session_state.to_be_saved_messages = st.session_state.messages.copy()
                 st.session_state.state["messages"] = load_chat_messages_to_state(st.session_state.messages)
 
-    for msg in st.session_state.messages:
+    
+
+    for i,msg in enumerate(st.session_state.messages):
         role = msg.get("role") or msg.get("sender") or "assistant"
         content = msg.get("content") or msg.get("message") or ""
         with st.chat_message(role):
-            st.markdown(content)
+            if role == "assistant" and "Here is your loan statement" in content:
+                st.markdown(content)
+                pdf_bytes = generate_loan_statement_pdf(customer_id_input)
+                st.download_button(
+                    label="📄 Download PDF",
+                    data=pdf_bytes,
+                    file_name="loan_statement.pdf",
+                    mime="application/pdf",
+                    key=f"loan_pdf_{i}"
+                )
+            else:
+                st.markdown(content)
+
+
 
     with st.container():
         col1, col2 = st.columns([4, 10], border=True)

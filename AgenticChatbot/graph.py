@@ -45,4 +45,3 @@ config = RunnableConfig({"configurable": {"thread_id": 1}})
 def invoke_model(model: CompiledGraph, input_state: Dict[str, Any]) -> Dict[str, Any]:
     response = model.invoke(input_state, config= config)
     return model.get_state(config= config).values
-

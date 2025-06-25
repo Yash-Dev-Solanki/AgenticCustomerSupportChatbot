@@ -38,7 +38,7 @@ def create_handoff_tool(*, agent_name: str, description: str | None = None):
         )
 
         print(f"Handing Off to {name}")
-        
+        print(f"Current messages: {state['messages']}")
         return Command(
             goto= agent_name,
             update= {"messages": state["messages"] + [tool_message]},

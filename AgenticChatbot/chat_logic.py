@@ -26,13 +26,10 @@ def fetch_chat_messages(customer_id, chat_id):
         response.raise_for_status()
         chat = response.json()
         messages = chat.get("messages", [])
-
-        # Normalize and filter messages that actually have content
         filtered_messages = []
         for msg in messages:
             content = msg.get("message") or msg.get("content") or ""
             if content.strip():
-                # Keep the full message object but with validated content
                 msg["content"] = content.strip()
                 filtered_messages.append(msg)
 
@@ -49,8 +46,6 @@ def save_chat_messages(chat_id, customer_id, messages):
     if not messages:
         print("[DEBUG] No messages passed — skipping save.")
         return
-
-    # Step 1: Filter out empty messages and format them
     filtered = []
     for msg in messages:
         content = msg.get("content") or msg.get("message") or ""
@@ -65,8 +60,6 @@ def save_chat_messages(chat_id, customer_id, messages):
     if not filtered:
         print("[DEBUG] All messages are empty — skipping save.")
         return
-
-    # Step 2: Fetch existing messages from backend
     get_url = f"http://localhost:5142/api/Chat/{customer_id}/{chat_id}"
     try:
         get_response = requests.get(get_url)
@@ -76,7 +69,6 @@ def save_chat_messages(chat_id, customer_id, messages):
         print(f"[ERROR] Failed to fetch existing messages: {e}")
         existing_messages = []
 
-    # Step 3: Normalize both sets for comparison
     def normalize(msg):
         return {
             "sender": (msg.get("sender") or msg.get("role") or "").strip().lower(),
@@ -89,8 +81,6 @@ def save_chat_messages(chat_id, customer_id, messages):
     if existing_normalized == new_normalized:
         print("[DEBUG] No new messages or changes detected — skipping save.")
         return
-
-    # Step 4: POST updated messages
     url = "http://localhost:5142/api/Chat/store-messages"
     headers = {"Content-Type": "application/json"}
     payload = {
