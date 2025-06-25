@@ -1,8 +1,20 @@
 import requests
+import urllib3
+urllib3.disable_warnings()
 from datetime import datetime
+
+
+
 def fetch_all_chats(customer_id):
-    url = f"http://localhost:5142/api/Chat/{customer_id}"
-    response = requests.get(url)
+    url = f"https://localhost:7260/api/Chat/{customer_id}"
+    response = requests.get(
+        url, 
+        headers={'accept': '*/*'},
+        verify=False,           
+        allow_redirects=True,
+        timeout=30
+    )
+    
     if response.status_code == 200:
         chats = response.json()
         return [
@@ -19,7 +31,7 @@ def fetch_all_chats(customer_id):
 def fetch_chat_messages(customer_id, chat_id):
     if not customer_id or not chat_id:
         return []
-    url = f"http://localhost:5142/api/Chat/{customer_id}/{chat_id}"
+    url = f"https://localhost:7260/api/Chat/{customer_id}/{chat_id}"
     try:
         response = requests.get(url)
         response.raise_for_status()
@@ -54,7 +66,7 @@ def save_chat_messages(chat_id, customer_id, messages):
         return
 
     # Step 2: Fetch existing messages from backend
-    get_url = f"http://localhost:5142/api/Chat/{customer_id}/{chat_id}"
+    get_url = f"https://localhost:7260/api/Chat/{customer_id}/{chat_id}"
     try:
         get_response = requests.get(get_url)
         get_response.raise_for_status()
@@ -78,7 +90,7 @@ def save_chat_messages(chat_id, customer_id, messages):
         return
 
     # Step 4: POST updated messages
-    url = "http://localhost:5142/api/Chat/store-messages"
+    url = "https://localhost:7260/api/Chat/store-messages"
     headers = {"Content-Type": "application/json"}
     payload = {
         "chatId": chat_id,
@@ -92,8 +104,11 @@ def save_chat_messages(chat_id, customer_id, messages):
     else:
         print(f"[ERROR] Failed to save messages: {response.status_code} - {response.text}")
 
+
+
 def create_new_chat(customer_id):
-    url = "http://localhost:5142/api/Chat/create-chat"
+
+    url = "https://localhost:7260/api/Chat/create-chat"
     payload = {
         "customerId": customer_id
     }

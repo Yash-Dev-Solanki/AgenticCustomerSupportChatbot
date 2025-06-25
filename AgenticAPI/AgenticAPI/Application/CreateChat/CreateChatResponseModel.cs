@@ -1,9 +1,14 @@
+using AgenticAPI.Domain;
+
 namespace AgenticAPI.Application.CreateChat
 {
-    public class CreateChatResponseModel
+    public class CreateChatResponseModel: BaseResponseModel
     {
-        public string ChatId { get; set; }
+        public string? ChatId { get; set; }
         public DateTime CreatedAt { get; set; }
-        public string Message { get; set; }
+
+        public CreateChatResponseModel(): base()
+        {
+        }
     }
 }

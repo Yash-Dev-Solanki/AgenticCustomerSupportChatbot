@@ -9,8 +9,8 @@ namespace AgenticAPI.Application.CreateCustomer
 {
     public class CreateCustomerCommand: IRequestHandler<CreateCustomerRawRequestModel, CreateCustomerResponseModel>
     {
-        public IMapper _mapper;
-        public IMongoService _mongoService;
+        private readonly IMapper _mapper;
+        private readonly IMongoService _mongoService;
 
         public CreateCustomerCommand(IMapper mapper, IMongoService mongoService)
         {

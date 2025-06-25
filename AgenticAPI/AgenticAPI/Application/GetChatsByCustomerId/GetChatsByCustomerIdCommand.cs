@@ -1,9 +1,10 @@
 using AgenticAPI.Infrastructure;
 using AgenticAPI.Application.GetChatsByCustomerId;
+using MediatR;
 
 namespace AgenticAPI.Application.GetChatsByCustomerId
 {
-    public class GetChatsByCustomerIdCommand
+    public class GetChatsByCustomerIdCommand: IRequestHandler<GetChatsByCustomerIdRequestModel, GetChatsByCustomerIdResponseModel>
     {
         private readonly IChatService _chatService;
 
@@ -12,16 +13,32 @@ namespace AgenticAPI.Application.GetChatsByCustomerId
             _chatService = chatService;
         }
 
-        public async Task<List<GetChatsByCustomerIdResponseModel>> ExecuteAsync(string customerId)
+        public async Task<GetChatsByCustomerIdResponseModel> Handle(GetChatsByCustomerIdRequestModel request, CancellationToken cancellationToken)
         {
-            var chats = await _chatService.GetChatsByCustomerId(customerId);
-
-            return chats.Select(chat => new GetChatsByCustomerIdResponseModel
+            var response = new GetChatsByCustomerIdResponseModel();
+            try
             {
-                ChatId = chat.ChatId,
-                CustomerId = chat.CustomerId,
-                CreatedAt = chat.CreatedAt,
-            }).ToList();
+                var result = await _chatService.GetChatsByCustomerId(request.CustomerId!);
+                response.Success = true;
+                if (result == null || result.Count == 0)
+                {
+                    response.StatusCode = System.Net.HttpStatusCode.NotFound;
+                    response.Errors.Add("Customer Id has no related chats");
+                }
+                else
+                {
+                    response.StatusCode = System.Net.HttpStatusCode.OK;
+                    response.ChatIds = result;
+                } 
+            }
+            catch (Exception ex)
+            {
+                response.Success = false;
+                response.StatusCode= System.Net.HttpStatusCode.InternalServerError;
+                response.Errors!.Add(ex.Message);
+            }
+
+            return response;
         }
     }
 }

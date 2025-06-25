@@ -1,5 +1,6 @@
 from tools.query_handlers.RAG import RAG
-from langchain_chroma import Chroma
+from langchain_qdrant import QdrantVectorStore
+from qdrant_client import QdrantClient
 from langchain_openai import OpenAIEmbeddings
 from pydantic import SecretStr
 import os
@@ -8,11 +9,12 @@ from langchain_core.tools import BaseTool, tool
 
 
 load_dotenv()
-embeddings = OpenAIEmbeddings(model= "text-embedding-3-small", api_key= SecretStr(os.getenv("OPENAI_API_KEY", "")))
-payments_vector_store = Chroma(
+embeddings = OpenAIEmbeddings(model= "text-embedding-3-large", api_key= SecretStr(os.getenv("OPENAI_API_KEY", "")))
+client = QdrantClient(path= "./qdrant/Payments")
+payments_vector_store = QdrantVectorStore(
+    client= client,
     collection_name= 'Payments',
-    embedding_function= embeddings,
-    persist_directory= './chroma/Payments'
+    embedding= embeddings,
 )
 
 payments_prompt = '''

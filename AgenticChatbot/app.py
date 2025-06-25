@@ -7,117 +7,49 @@ from langchain_core.messages import AIMessage, HumanMessage
 
 from graph import build_model, invoke_model
 from speech_processing import recognize_from_microphone
-from utils.vectorize import vectorize_all_domains_at_startup
-
-from chat_logic import fetch_all_chats, fetch_chat_messages, save_chat_messages, create_new_chat
-
-vectorize_all_domains_at_startup()
 
 def handle_prompt(prompt: str):
-    if "current_chat_id" not in st.session_state or not st.session_state.current_chat_id:
-        new_chat_id = create_new_chat(st.session_state.state["customer"]["customerId"])
-        st.session_state.current_chat_id = new_chat_id
-        st.session_state.chats = load_chats(st.session_state.state["customer"]["customerId"])
-        st.session_state.messages = []
-        st.session_state.to_be_saved_messages = []
-        st.session_state.state["messages"] = []
-
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    st.session_state.state["messages"].append(HumanMessage(content=prompt))
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    st.session_state.to_be_saved_messages = st.session_state.messages.copy()
+    if not (prompt is None or prompt.strip() == ""):
+        st.session_state.state["messages"].append(HumanMessage(content=prompt))
+        st.session_state.messages.append({"role": "user", "content": prompt})
 
     response = invoke_model(model, input_state=st.session_state.state)
     ai_msg = response["messages"][-1]
 
     st.session_state.state["messages"].append(ai_msg)
     st.session_state.messages.append({"role": "assistant", "content": ai_msg.content})
-    st.session_state.to_be_saved_messages = st.session_state.messages.copy()
 
     st.rerun()
 
-
-def load_chats(customer_id):
-    if not customer_id:
-        return []
-    chats = fetch_all_chats(customer_id)
-
-    return sorted(chats or [], key=lambda c: c.get("createdAt", c.get("chatId", "")), reverse=True)
-
-def load_chat_messages_to_state(messages):
-    converted = []
-    for m in messages:
-        role = m.get("role") or m.get("sender")
-        content = m.get("content") or m.get("message")
-        if role == "user":
-            converted.append(HumanMessage(content=content))
-        else:
-            converted.append(AIMessage(content=content))
-    return converted
 
 def run_app():
     st.title("Concorde Finances")
     st.markdown("Providing Loan Customer Assistance")
 
-    customer_id_input = st.text_input("Enter Customer ID", key="customer_input")
-
-    if not customer_id_input:
-        st.info("Please enter your Customer ID above to start chatting.")
-        return
-
-    if ("state" not in st.session_state or
-        st.session_state.state.get("customer", {}).get("customerId") != customer_id_input):
-
+    if "state" not in st.session_state: 
         st.session_state.state = {
-            "messages": [AIMessage(content="How May I Help You?")],
-            "customer": {"customerId": customer_id_input},
-            "validated": None
+            "customer": None,
+            "validated": None,
+            "messages": [],
+            "validation_retries": 3,
+            "current_retries": 0,
         }
-        st.session_state.messages = [{"role": "assistant", "content": "How May I Help You?"}]
-        st.session_state.to_be_saved_messages = st.session_state.messages.copy()
-        st.session_state.chats = load_chats(customer_id_input)
-        st.session_state.current_chat_id = None
-
-    with st.sidebar:
-        st.header("Chats")
-
-        if st.button("New Chat"):
-            if st.session_state.get("current_chat_id"):
-                save_chat_messages(
-                    st.session_state.current_chat_id,
-                    customer_id_input,
-                    st.session_state.to_be_saved_messages
-                )
-
-            st.session_state.current_chat_id = None
-            st.session_state.messages = [{"role": "assistant", "content": "How May I Help You?"}]
-            st.session_state.to_be_saved_messages = st.session_state.messages.copy()
-            st.session_state.state["messages"] = [AIMessage(content="How May I Help You?")]
-
-        for chat in st.session_state.chats:
-            label = chat.get("title", chat.get("chatId"))
-            if st.button(label, key=f"chat_{chat.get('chatId')}"):
-                if st.session_state.get("current_chat_id"):
-                    save_chat_messages(
-                        st.session_state.current_chat_id,
-                        customer_id_input,
-                        st.session_state.to_be_saved_messages
-                    )
-
-                st.session_state.current_chat_id = chat["chatId"]
-                messages = fetch_chat_messages(customer_id_input, chat["chatId"])
-                st.session_state.messages = messages if messages else []
-                st.session_state.to_be_saved_messages = st.session_state.messages.copy()
-                st.session_state.state["messages"] = load_chat_messages_to_state(st.session_state.messages)
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
 
     for msg in st.session_state.messages:
-        role = msg.get("role") or msg.get("sender") or "assistant"
-        content = msg.get("content") or msg.get("message") or ""
+        role = msg.get("role")
+        content = msg.get("content")
         with st.chat_message(role):
             st.markdown(content)
 
+    
+    if st.session_state.state["validated"] is None and len(st.session_state.state["messages"]) == 0:
+        handle_prompt("")
+    
     with st.container():
         col1, col2 = st.columns([4, 10], border=True)
         with col1:

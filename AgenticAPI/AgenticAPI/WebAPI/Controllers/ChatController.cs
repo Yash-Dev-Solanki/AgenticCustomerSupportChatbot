@@ -1,8 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
 using AgenticAPI.Infrastructure;
-using AgenticAPI.Application.StoreChatMessage;
+using AgenticAPI.Application.AddChatMessage;
 using AgenticAPI.Domain;
 using AgenticAPI.Application.CreateChat;
+using MediatR;
+using System.ComponentModel.DataAnnotations;
+using AgenticAPI.Application.GetChatById;
+using AgenticAPI.Application.GetChatsByCustomerId;
 
 namespace AgenticAPI.WebAPI.Controllers
 {
@@ -11,19 +15,39 @@ namespace AgenticAPI.WebAPI.Controllers
     public class ChatController : ControllerBase
     {
         private readonly IChatService _chatService;
+        private readonly IMediator _mediator;
 
-        public ChatController(IChatService chatService)
+        public ChatController(IChatService chatService, IMediator mediator)
         {
             _chatService = chatService;
+            _mediator = mediator;
         }
-        [HttpPost("create-chat")]
-        public async Task<IActionResult> CreateChat([FromBody] CreateChatRequestModel request)
+
+
+        [HttpPost("CreateChat")]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ActionName("CreateChat")]
+        public async Task<IActionResult> CreateChat([FromHeader][Required] string customerId)
         {
             try
             {
-                var command = new CreateChatCommand(_chatService);
-                var result = await command.ExecuteAsync(request);
-                return CreatedAtAction(nameof(GetChatById), new { customerId = request.CustomerId, chatId = result.ChatId }, result);
+                var request = new CreateChatRequestModel { CustomerId = customerId };
+                var response = await _mediator.Send(request);
+
+                if (response.StatusCode == System.Net.HttpStatusCode.Created)
+                {
+                    return Created("Chat Created for Customer", response);
+                }
+                else if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+                {
+                    return BadRequest(response);
+                }
+                else
+                {
+                    return StatusCode(500, "Could not access DB");
+                }
             }
             catch (Exception ex)
             {
@@ -31,27 +55,97 @@ namespace AgenticAPI.WebAPI.Controllers
             }
         }
 
-        [HttpGet("{customerId}")]
-        public async Task<IActionResult> GetChatsByCustomerId(string customerId)
+
+        [HttpPost("AddMesssages")]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ActionName("AddMessages")]
+        public async Task<IActionResult> AddMessagesToChat([FromBody] AddChatMessagesRequestModel request)
         {
-            var chats = await _chatService.GetChatsByCustomerId(customerId);
-            if (chats == null || chats.Count == 0)
-                return NotFound($"No chats found for customerId: {customerId}");
-            return Ok(chats);
+            try
+            {
+                var response = await _mediator.Send(request);
+                
+                if (response.StatusCode == System.Net.HttpStatusCode.Created)
+                {
+                    return Created($"{request.Messages?.Count} added to Chat History", response);
+                }
+                else if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+                {
+                    return BadRequest(response);
+                }
+                else
+                {
+                    return StatusCode(500, "Could not access DB");
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
         }
-        [HttpGet("{customerId}/{chatId}")]
-        public async Task<IActionResult> GetChatById(string customerId, string chatId)
+
+        [HttpGet("GetChatsForCustomer")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetChatsByCustomerId([FromHeader][Required] string customerId)
         {
-            var chat = await _chatService.GetChatById(customerId, chatId);
-            if (chat == null)
-                return NotFound($"Chat with id {chatId} for customerId {customerId} not found");
-            return Ok(chat);
+            try
+            {
+                var request = new GetChatsByCustomerIdRequestModel { CustomerId = customerId };
+                var response = await _mediator.Send(request);
+
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    return NotFound(response);
+                }
+                else if (response.StatusCode == System.Net.HttpStatusCode.OK)
+                {
+                    return Ok(response);
+                }
+                else
+                {
+                    return StatusCode(500, "Could not access DB");
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
         }
-        [HttpPost("store-messages")]
-        public async Task<IActionResult> AddMessagesToChat([FromBody] StoreChatMessagesRequestModel request)
+
+
+        [HttpGet("{chatId}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ActionName("GetChatById")]
+        public async Task<IActionResult> GetChatById(string chatId)
         {
-            await _chatService.AddMessagesToChat(request.ChatId, request.Messages);
-            return Ok($"{request.Messages.Count} messages added");
+            try
+            {
+                var request = new GetChatByIdRequestModel { ChatId = chatId };
+                var response = await _mediator.Send(request);
+
+                if (response.StatusCode == System.Net.HttpStatusCode.OK)
+                {
+                    return Ok(response);
+                }
+                else if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+                {
+                    return BadRequest(response);
+                }
+                else
+                {
+                    return StatusCode(500, "Could not access DB");
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            } 
         }
     }
 }

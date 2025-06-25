@@ -12,6 +12,7 @@ using AgenticAPI.Domain;
 using AgenticAPI.Application.UpdateCustomer;
 using System.ComponentModel.DataAnnotations;
 using MongoDB.Bson;
+using AgenticAPI.Application.CheckCustomerById;
 
 namespace AgenticAPI.WebAPI.Controllers
 {
@@ -75,6 +76,37 @@ namespace AgenticAPI.WebAPI.Controllers
                 else if (response.StatusCode == HttpStatusCode.BadRequest)
                 {
                     return BadRequest(response);
+                }
+                else
+                {
+                    return StatusCode(500, "Could not access DB");
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = "Internal Server Error", message = ex.StackTrace });
+            }
+        }
+
+        [HttpGet("CheckCustomer")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ActionName("CheckCustomerExists")]
+        public async Task<IActionResult> CheckCustomerExists([FromHeader][Required] string customerId)
+        {
+            try
+            {
+                var request = new CheckCustomerRequestModel { CustomerId = customerId };
+                var response = await _mediator.Send(request);
+
+                if (response.StatusCode == HttpStatusCode.OK)
+                {
+                    return Ok(response);
+                }
+                else if (response.StatusCode == HttpStatusCode.NotFound)
+                {
+                    return NotFound(response);
                 }
                 else
                 {

@@ -1,11 +1,14 @@
 using System;
+using AgenticAPI.Domain;
 
 namespace AgenticAPI.Application.GetChatsByCustomerId
 {
-    public class GetChatsByCustomerIdResponseModel
+    public class GetChatsByCustomerIdResponseModel: BaseResponseModel
     {
-        public string ChatId { get; set; }
-        public string CustomerId { get; set; }
-        public DateTime CreatedAt { get; set; }
+        public List<string>? ChatIds { get; set; }
+
+        public GetChatsByCustomerIdResponseModel(): base()
+        {
+        }
     }
 }

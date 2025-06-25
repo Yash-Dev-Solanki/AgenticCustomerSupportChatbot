@@ -4,6 +4,7 @@ from agents.validation_agent import get_validation_agent
 from agents.update_agent import get_update_agent
 from agents.supervisor_agent import get_supervisor_agent
 from agents.query_agent import get_query_agent
+from agents.welcome_agent import get_welcome_agent
 
 from typing import Dict, Any
 from langgraph.graph import StateGraph, START, END
@@ -11,7 +12,14 @@ from langgraph.checkpoint.memory import InMemorySaver
 from langchain_core.runnables import RunnableConfig
 
 from langgraph.graph.graph import CompiledGraph
-from langchain_core.messages import AIMessage, HumanMessage
+from typing import Literal
+
+
+def router(state: GraphState) -> Literal["welcome", "supervisor"]:
+    if state["validated"]:
+        return "supervisor"
+    
+    return "welcome"
 
 def build_model() -> CompiledGraph:
     checkpointer= InMemorySaver()
@@ -20,15 +28,22 @@ def build_model() -> CompiledGraph:
     query_agent = get_query_agent()
     members = ["validation_agent", "update_agent", "query_agent"]
     supervisor_agent = get_supervisor_agent(members= members)
+    welcome_agent = get_welcome_agent()
 
     supervisor = (
         StateGraph(GraphState)
-        .add_node(supervisor_agent, destinations= ("validation_agent", "update_agent", "query_agent", END))
+        .add_node(supervisor_agent, destinations= ("update_agent", "query_agent", END))
         .add_node(validation_agent)
         .add_node(update_agent)
         .add_node(query_agent)
-        .add_edge(START, "supervisor")
-        .add_edge("validation_agent", "supervisor")
+        .add_node(welcome_agent)
+        .add_conditional_edges(
+            START, router,
+            {
+                "welcome": "welcome_agent",
+                "supervisor": "supervisor"
+            })
+        .add_edge("query_agent", "supervisor")
         .add_edge("update_agent", "supervisor")
     ).compile(checkpointer= checkpointer)
 
