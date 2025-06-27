@@ -9,11 +9,12 @@ from graph import build_model, invoke_model
 from speech_processing import recognize_from_microphone
 from pdf_generation import generate_loan_statement_pdf
 from chat_logic import fetch_all_chats, fetch_chat_messages, save_chat_messages, create_new_chat
+import asyncio
 
 
 def handle_prompt(prompt: str):
     if "current_chat_id" not in st.session_state or not st.session_state.current_chat_id:
-        new_chat_id = create_new_chat(st.session_state.state["customer"]["customerId"])
+        new_chat_id = asyncio.run(create_new_chat(st.session_state.state["customer"]["customerId"]))
         st.session_state.current_chat_id = new_chat_id
         st.session_state.chats = load_chats(st.session_state.state["customer"]["customerId"])
         st.session_state.messages = []
@@ -33,11 +34,11 @@ def handle_prompt(prompt: str):
     st.session_state.state["messages"].append(ai_msg)
     st.session_state.messages.append({"role": "assistant", "content": ai_msg.content})
     st.session_state.to_be_saved_messages = st.session_state.messages.copy()
-    save_chat_messages(
+    asyncio.run(save_chat_messages(
         st.session_state.current_chat_id,
         st.session_state.state["customer"]["customerId"],
         st.session_state.to_be_saved_messages
-    )
+    ))
     st.session_state.chats = load_chats(st.session_state.state["customer"]["customerId"])
     st.session_state.to_be_saved_messages = []
     st.rerun()
@@ -47,24 +48,11 @@ def load_chats(customer_id):
     if not customer_id:
         return []
 
-    chats = fetch_all_chats(customer_id)
+    chats = asyncio.run(fetch_all_chats(customer_id))
     if not chats:
         return []
+    return sorted(chats, key=lambda c: c.get("createdAt", c.get("chatId", "")), reverse=True)
 
-    valid_chats = []
-    for chat in chats:
-        chat_id = chat.get("chatId")
-        if not chat_id:
-            continue
-
-        messages = fetch_chat_messages(customer_id, chat_id)
-        for msg in messages:
-            content = msg.get("message") or msg.get("content") or ""
-            if content.strip():  
-                valid_chats.append(chat)
-                break
-
-    return sorted(valid_chats, key=lambda c: c.get("createdAt", c.get("chatId", "")), reverse=True)
 
 def load_chat_messages_to_state(messages):
     converted = []
@@ -105,11 +93,11 @@ def run_app():
 
         if st.button("New Chat"):
             if st.session_state.get("current_chat_id"):
-                save_chat_messages(
+                asyncio.run(save_chat_messages(
                     st.session_state.current_chat_id,
                     customer_id_input,
                     st.session_state.to_be_saved_messages
-                )
+                ))
                 st.session_state.to_be_saved_messages = []
 
             st.session_state.current_chat_id = None
@@ -121,14 +109,14 @@ def run_app():
             label = chat.get("title", chat.get("chatId"))
             if st.button(label, key=f"chat_{chat.get('chatId')}"):
                 if st.session_state.get("current_chat_id"):
-                    save_chat_messages(
+                    asyncio.run(save_chat_messages(
                         st.session_state.current_chat_id,
                         customer_id_input,
                         st.session_state.to_be_saved_messages
-                    )
+                    )) 
                     st.session_state.to_be_saved_messages = []
                 st.session_state.current_chat_id = chat["chatId"]
-                messages = fetch_chat_messages(customer_id_input, chat["chatId"])
+                messages = asyncio.run(fetch_chat_messages(customer_id_input, chat["chatId"]))
                 st.session_state.messages = messages if messages else []
                 st.session_state.to_be_saved_messages = st.session_state.messages.copy()
                 st.session_state.state["messages"] = load_chat_messages_to_state(st.session_state.messages)
