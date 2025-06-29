@@ -38,7 +38,6 @@ def create_handoff_tool(*, agent_name: str, description: str | None = None):
         )
 
         print(f"Handing Off to {name}")
-        print(f"Current messages: {state['messages']}")
         return Command(
             goto= agent_name,
             update= {"messages": state["messages"] + [tool_message]},
@@ -60,11 +59,15 @@ assign_to_loan_statement_agent = create_handoff_tool(
     agent_name="loan_statement_agent",
     description="Get the user's loan statement (optionally filtered by date range)"
 )
+assign_to_loan_management_agent = create_handoff_tool(
+    agent_name="loan_management_agent",
+    description="Manage user loan inquiries and actions"
+)
 
 def get_supervisor_agent(members: List[str]) -> CompiledGraph:
     supervisor_agent = create_react_agent(
         model= model,
-        tools= [ assign_to_update_agent, assign_to_query_agent,assign_to_loan_statement_agent],
+        tools= [ assign_to_update_agent, assign_to_query_agent,assign_to_loan_statement_agent, assign_to_loan_management_agent],
         prompt = (
             f"""
             You're a supervisor tasked with managing conversation between the following workers: {members}
@@ -72,7 +75,8 @@ def get_supervisor_agent(members: List[str]) -> CompiledGraph:
             The workers can perform the following tasks:
             - an updation agent: Perform updates to customer data stored in the collection. 
             - a query agent: Retrieve responses to user queries from policy documents
-            - a loan statement agent: Provide loan statements to the user, optionally filtered by date ranges specified by the user.
+            - a loan statement agent: Provide loan statements to the user.
+            - a loan management agent: Manage user loan inquiries and actions
 
             Important Rules:
             1. Do not do any work yourself. 

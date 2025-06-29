@@ -61,7 +61,6 @@ qa_chain = ConversationalRetrievalChain.from_llm(
 
 def ask_kyc(question):
     result = qa_chain.invoke({"question": question})
-    print(f"ask_kyc got result: {result}")
     return result["answer"]
 
 
@@ -82,7 +81,6 @@ def kyc_tool(
         Returns:
             Command: A LangGraph command that updates state and returns a ToolMessage with the answer.
     """
-    print(f"Kyc tool received question: {question}")
 
     # Get the answer from the QA chain
     answer = ask_kyc(question)

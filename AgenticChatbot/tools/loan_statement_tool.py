@@ -44,10 +44,7 @@ def get_loan_statement(
         payments_raw = sorted(data.paymentHistory or [], key=lambda x: x.paymentDate)
         initial_principal = summary.loanAmount
         interest_rate_annual = summary.interestRate
-        interest_rate_monthly = interest_rate_annual / 12 / 100
         emi = summary.emiAmount
-        previous_principal = initial_principal
-
         summary_lines = [
             f"Loan Account Number: {data.loanAccountNumber}",
             f"Loan Amount: ${initial_principal:,.2f}",
@@ -63,28 +60,12 @@ def get_loan_statement(
         statement_text += "Payment History:\n\n"
         statement_text += "| No. | Date | EMI | Interest | Principal | Prev | Curr | Mode | Txn ID |\n"
         statement_text += "|-----|------|-----|----------|-----------|------|------|------|--------|\n"
-        payment_rows = []
 
         for idx, p in enumerate(payments_raw, 1):
-            interest = round(previous_principal * interest_rate_monthly, 2)
-            principal_paid = round(emi - interest, 2)
-            current_principal = round(previous_principal - principal_paid, 2)
-
             statement_text += (
-                f"| {idx} | {p.paymentDate.strftime('%d-%b-%Y')} | ${emi:,.2f} | ${interest:,.2f} | "
-                f"${principal_paid:,.2f} | ${previous_principal:,.2f} | ${current_principal:,.2f} | "
+                f"| {idx} | {p.paymentDate.strftime('%d-%b-%Y')} | ${p.paymentAmount:,.2f} | "
+                f"${p.interestPaid:,.2f} | ${p.principalPaid:,.2f} | "
+                f"${p.previousPrincipal:,.2f} | ${p.currentPrincipal:,.2f} | "
                 f"{p.paymentMode} | {p.transactionId} |\n"
             )
-            payment_rows.append({
-                "date": p.paymentDate.strftime('%d-%b-%Y'),
-                "emi": f"${emi:,.2f}",
-                "interest": f"${interest:,.2f}",
-                "principal": f"${principal_paid:,.2f}",
-                "prev": f"${previous_principal:,.2f}",
-                "curr": f"${current_principal:,.2f}",
-                "mode": p.paymentMode,
-                "txn": p.transactionId
-            })
-
-            previous_principal = current_principal
     return statement_text

@@ -89,8 +89,7 @@ def run_app():
         st.session_state.current_chat_id = None
 
     with st.sidebar:
-        st.header("Chats")
-
+    
         if st.button("New Chat"):
             if st.session_state.get("current_chat_id"):
                 asyncio.run(save_chat_messages(
@@ -104,7 +103,9 @@ def run_app():
             st.session_state.messages = [{"role": "assistant", "content": "How May I Help You?"}]
             st.session_state.to_be_saved_messages = st.session_state.messages.copy()
             st.session_state.state["messages"] = [AIMessage(content="How May I Help You?")]
-
+            
+        st.header("Chats")
+        
         for chat in st.session_state.chats:
             label = chat.get("title", chat.get("chatId"))
             if st.button(label, key=f"chat_{chat.get('chatId')}"):
@@ -131,7 +132,7 @@ def run_app():
                 st.markdown(content)
                 pdf_bytes = generate_loan_statement_pdf(customer_id_input)
                 st.download_button(
-                    label="📄 Download PDF",
+                    label="Download PDF",
                     data=pdf_bytes,
                     file_name="loan_statement.pdf",
                     mime="application/pdf",
