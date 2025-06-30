@@ -26,14 +26,14 @@ def handle_prompt(prompt: str):
 
     st.session_state.state["messages"].append(HumanMessage(content=prompt))
     st.session_state.messages.append({"role": "user", "content": prompt})
-    st.session_state.to_be_saved_messages = st.session_state.messages.copy()
+    st.session_state.to_be_saved_messages.append({"role": "user", "content": prompt})
 
     response = invoke_model(model, input_state=st.session_state.state)
     ai_msg = response["messages"][-1]
 
     st.session_state.state["messages"].append(ai_msg)
     st.session_state.messages.append({"role": "assistant", "content": ai_msg.content})
-    st.session_state.to_be_saved_messages = st.session_state.messages.copy()
+    st.session_state.to_be_saved_messages.append({"role": "assistant", "content": ai_msg.content})  
     asyncio.run(save_chat_messages(
         st.session_state.current_chat_id,
         st.session_state.state["customer"]["customerId"],
@@ -84,7 +84,7 @@ def run_app():
             "validated": None
         }
         st.session_state.messages = [{"role": "assistant", "content": "How May I Help You?"}]
-        st.session_state.to_be_saved_messages = st.session_state.messages.copy()
+        st.session_state.to_be_saved_messages = [{"role": "assistant", "content": "How May I Help You?"}]
         st.session_state.chats = load_chats(customer_id_input)
         st.session_state.current_chat_id = None
 
@@ -101,7 +101,7 @@ def run_app():
 
             st.session_state.current_chat_id = None
             st.session_state.messages = [{"role": "assistant", "content": "How May I Help You?"}]
-            st.session_state.to_be_saved_messages = st.session_state.messages.copy()
+            st.session_state.to_be_saved_messages = [{"role": "assistant", "content": "How May I Help You?"}]
             st.session_state.state["messages"] = [AIMessage(content="How May I Help You?")]
             
         st.header("Chats")
@@ -119,7 +119,7 @@ def run_app():
                 st.session_state.current_chat_id = chat["chatId"]
                 messages = asyncio.run(fetch_chat_messages(customer_id_input, chat["chatId"]))
                 st.session_state.messages = messages if messages else []
-                st.session_state.to_be_saved_messages = st.session_state.messages.copy()
+                st.session_state.to_be_saved_messages = []
                 st.session_state.state["messages"] = load_chat_messages_to_state(st.session_state.messages)
 
     
