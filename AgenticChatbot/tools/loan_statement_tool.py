@@ -4,28 +4,36 @@ from langgraph.prebuilt import InjectedState
 from dateutil.parser import isoparse
 from services.loan_service import fetch_loan_statement
 from datetime import datetime
+from langchain_openai import ChatOpenAI
+from langchain_core.prompts import ChatPromptTemplate
+from dotenv import load_dotenv
+from pydantic import SecretStr
+import os
+import json
 
-@tool(parse_docstring=True,return_direct=True)
+load_dotenv()
+llm = ChatOpenAI(
+    model="gpt-4o",
+    temperature=0,
+    streaming=True,
+    api_key=SecretStr(os.getenv('OPENAI_API_KEY', ''))
+)
+
+@tool(parse_docstring=True, return_direct=True)
 def get_loan_statement(
     tool_call_id: Annotated[str, InjectedToolCallId],
     state: Annotated[Dict[str, Any], InjectedState],
 ) -> str:
     """
-    Fetch and return the loan statement for the current customer.
-
-    This tool retrieves loan-related details for the customer whose ID is 
-    available in the injected LangGraph state. It is designed to be used 
-    by an agent that has access to the current session's context.
+    Fetch and return the loan statement for the current customer using LLM formatting.
+    Includes a Markdown table for display and raw JSON array for backend use.
 
     Args:
-        tool_call_id (str): 
-            The ID injected into the tool call by the caller agent.
-        state (Dict[str, Any]): 
-            The current injected LangGraph state. It must contain a 
-            dictionary with a 'customer' key that includes the 'customerId'.
+        tool_call_id (str): Tool call ID injected by LangGraph.
+        state (Dict[str, Any]): Current LangGraph state with customerId.
 
     Returns:
-        str: A formatted string containing the loan statement details
+        str: A formatted loan statement with summary, Markdown table, and raw JSON array.
     """
     print("Transferred to loan_statement_tool")
 
@@ -37,35 +45,50 @@ def get_loan_statement(
             p.paymentDate = isoparse(p.paymentDate)
 
     if not data.success:
-        statement_text = f"Could not fetch loan statement: {', '.join(data.errors or ['Unknown error'])}"
-    else:
-        print(f"Fetched loan statement for customer {data.customerId}")
-        summary = data.loanSummary
-        payments_raw = sorted(data.paymentHistory or [], key=lambda x: x.paymentDate)
-        initial_principal = summary.loanAmount
-        interest_rate_annual = summary.interestRate
-        emi = summary.emiAmount
-        summary_lines = [
-            f"Loan Account Number: {data.loanAccountNumber}",
-            f"Loan Amount: ${initial_principal:,.2f}",
-            f"Interest Rate: {interest_rate_annual}%",
-            f"Tenure: {summary.tenureMonths} months",
-            f"EMI Amount: ${emi:,.2f}",
-            f"Start Date: {summary.startDate.strftime('%d-%b-%Y')}",
-            f"Status: {summary.status}",
+        return f"Could not fetch loan statement: {', '.join(data.errors or ['Unknown error'])}"
+
+    print(f"Fetched loan statement for customer {data.customerId}")
+
+    loan_input = {
+        "customerId": data.customerId,
+        "loanAccountNumber": data.loanAccountNumber,
+        "summary": {
+            "loanAmount": data.loanSummary.loanAmount,
+            "interestRate": data.loanSummary.interestRate,
+            "tenureMonths": data.loanSummary.tenureMonths,
+            "emiAmount": data.loanSummary.emiAmount,
+            "startDate": data.loanSummary.startDate.strftime('%Y-%m-%d'),
+            "status": data.loanSummary.status
+        },
+        "paymentHistory": [
+            {
+                "date": p.paymentDate.strftime('%Y-%m-%d'),
+                "paymentAmount": p.paymentAmount,
+                "interestPaid": p.interestPaid,
+                "principalPaid": p.principalPaid,
+                "previousPrincipal": p.previousPrincipal,
+                "currentPrincipal": p.currentPrincipal,
+                "paymentMode": p.paymentMode,
+                "transactionId": p.transactionId,
+            }
+            for p in sorted(data.paymentHistory or [], key=lambda x: x.paymentDate)
         ]
+    }
 
-        statement_text = f"## Loan Statement for Customer ID `{data.customerId}`\n"
-        statement_text += "\n".join(summary_lines) + "\n\n"
-        statement_text += "Payment History:\n\n"
-        statement_text += "| No. | Date | EMI | Interest | Principal | Prev | Curr | Mode | Txn ID |\n"
-        statement_text += "|-----|------|-----|----------|-----------|------|------|------|--------|\n"
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", """
+        You are a helpful financial assistant.
+        
+        Given the following loan JSON data:
+        1. Generate a loan summary in plain readable text (no markdown headers or bullet points).
+        2. Then generate a payment history **Markdown table**.
+           Use columns: No., Date, EMI, Interest, Principal, Prev, Curr, Mode, Txn ID.
+        3. After the table, on a new line, include only the **raw JSON array** of payment records.
+           Do not explain or format the JSON in any way.
+        4. All currency must be formatted as US dollars (e.g. $10,000.00).
+        """),
+        ("human", "{input}")
+    ])
 
-        for idx, p in enumerate(payments_raw, 1):
-            statement_text += (
-                f"| {idx} | {p.paymentDate.strftime('%d-%b-%Y')} | ${p.paymentAmount:,.2f} | "
-                f"${p.interestPaid:,.2f} | ${p.principalPaid:,.2f} | "
-                f"${p.previousPrincipal:,.2f} | ${p.currentPrincipal:,.2f} | "
-                f"{p.paymentMode} | {p.transactionId} |\n"
-            )
-    return statement_text
+    chain = prompt | llm
+    return chain.invoke({"input": json.dumps(loan_input)})

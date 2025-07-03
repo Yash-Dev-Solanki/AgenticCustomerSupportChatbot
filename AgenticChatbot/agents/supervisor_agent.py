@@ -48,13 +48,9 @@ def create_handoff_tool(*, agent_name: str, description: str | None = None):
 
 
 
-# Handoff Tools
 assign_to_validation_agent = create_handoff_tool(agent_name= "validation_agent", description= "Assign task to a validation agent")
 assign_to_update_agent = create_handoff_tool(agent_name= "update_agent", description= "Assign task to a update agent")
 assign_to_query_agent = create_handoff_tool(agent_name= "query_agent", description= "Assign task to query agent")
-assign_to_payments_agent = create_handoff_tool(agent_name= "payments_agent", description= "Assign task to payments agent")
-assign_to_profile_agent = create_handoff_tool(agent_name= "profile_agent", description= "Assign task to profile agent")
-assign_to_kyc_agent = create_handoff_tool(agent_name= "kyc_agent", description= "Assign task to kyc agent")
 assign_to_loan_statement_agent = create_handoff_tool(
     agent_name="loan_statement_agent",
     description="Get the user's loan statement (optionally filtered by date range)"
