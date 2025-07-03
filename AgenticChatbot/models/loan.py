@@ -4,11 +4,13 @@ from datetime import datetime
 
 class LoanPayment(BaseModel):
     paymentDate: datetime
-    amountPaid: float
+    paymentAmount: float
+    interestPaid: float
+    principalPaid: float
+    previousPrincipal: float
+    currentPrincipal: float
     paymentMode: str
-    status: str
-    transactionId: Optional[str] = None
-    loanAccountNumber: Optional[str] = None
+    transactionId: str
 
 class LoanSummary(BaseModel):
     loanAmount: float

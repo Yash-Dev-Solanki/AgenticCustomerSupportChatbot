@@ -16,6 +16,7 @@ model = ChatOpenAI(
     api_key=SecretStr(os.getenv('OPENAI_API_KEY', ''))
 )
 
+
 def get_loan_statement_agent():
     agent = create_react_agent(
         model=model,
@@ -32,6 +33,7 @@ def get_loan_statement_agent():
             - Do NOT repeat the tool call.
             - Call the tool exactly ONCE.
             - The tool will use information from the conversation state.
+            -return the response as is fetched by the tool do not modify it.
 
             Once the tool has been used, stop and return control to the supervisor or user."""
         ),

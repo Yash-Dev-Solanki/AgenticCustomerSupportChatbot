@@ -78,13 +78,45 @@ namespace AgenticAPI.Infrastructure
         {
             try
             {
-                await _loanPaymentsCollection.InsertOneAsync(loanPayment);
+                var loanDetails = await GetLoanDetailsByCustomerId(loanPayment.CustomerId);
+                if (loanDetails == null)
+                {
+                    throw new Exception($"No loan details found for customer ID: {loanPayment.CustomerId}");
+                }
+
+                double monthlyRate = loanDetails.InterestRate / 12 / 100;
+                var filter = Builders<LoanPayment>.Filter.Eq(lp => lp.CustomerId, loanPayment.CustomerId);
+                var latestPayment = await _loanPaymentsCollection
+                    .Find(filter)
+                    .SortByDescending(lp => lp.PaymentDate)
+                    .Limit(1)
+                    .FirstOrDefaultAsync();
+
+                double previousPrincipal = latestPayment?.CurrentPrincipal ?? loanDetails.LoanAmount;
+                double interest = Math.Round(previousPrincipal * monthlyRate, 2);
+                double principalPaid = Math.Round(loanPayment.PaymentAmount - interest, 2);
+                double currentPrincipal = Math.Round(previousPrincipal - principalPaid, 2);
+                var loanPaymentResult = new LoanPayment
+                {
+                    CustomerId = loanPayment.CustomerId,
+                    LoanAccountNumber = loanPayment.LoanAccountNumber,
+                    PaymentDate = loanPayment.PaymentDate,
+                    PaymentAmount = loanPayment.PaymentAmount,
+                    PaymentMode = loanPayment.PaymentMode,
+                    TransactionId = loanPayment.TransactionId,
+                    PreviousPrincipal = previousPrincipal,
+                    InterestPaid = interest,
+                    PrincipalPaid = principalPaid,
+                    CurrentPrincipal = currentPrincipal
+                };
+                await _loanPaymentsCollection.InsertOneAsync(loanPaymentResult);
                 return true;
             }
             catch (Exception ex)
             {
-                throw new Exception("Error adding loan payments: " + ex.Message);
+                throw new Exception("Error adding loan payment with computed fields: " + ex.Message);
             }
         }
+
     }
 }
