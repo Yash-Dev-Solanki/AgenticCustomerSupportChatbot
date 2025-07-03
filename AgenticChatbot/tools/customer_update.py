@@ -1,4 +1,3 @@
-from click import command
 from models.customer import Customer
 from endpoints import Endpoints
 
@@ -53,8 +52,7 @@ def update_customer_email(
         tool_message = ToolMessage(content=tool_content, tool_call_id=tool_call_id)
         return Command(update={
             "messages": state['messages'] + [tool_message],
-            "customer": customer,
-            "is_last_step": True
+            "customer": customer.model_dump(mode= 'json'),
         })
     else:
         status = response.status_code
@@ -75,7 +73,8 @@ def update_customer_payment_reminder( payment_reminder: bool, tool_call_id: Anno
     Returns the details of the customer after the update is complete with a status code of 202 if the update operation is successful. Otherwise, returns a list of errors on why the operation failed.
 
     Args:
-        payment_reminder (str): whether the customer wishes to opt into payment reminders
+        customer_id (str): the customer Id to be looked up in the collection
+        payment_reminder (bool): whether the customer wishes to opt into payment reminders
         tool_call_id (str): the id injected into into the tool call by the caller agent
         state: A state object containing relevant metadata that serves as short-term memory checkpointer for the agent
     """
@@ -91,8 +90,7 @@ def update_customer_payment_reminder( payment_reminder: bool, tool_call_id: Anno
         tool_message = ToolMessage(content= tool_content, tool_call_id= tool_call_id)
         command = Command(update= {
             "messages": state['messages'] + [tool_message],
-            "customer": customer,
-            "is_last_step": True
+            "customer": customer.model_dump(mode= 'json'),
         })
     else:
         print("Not updated")

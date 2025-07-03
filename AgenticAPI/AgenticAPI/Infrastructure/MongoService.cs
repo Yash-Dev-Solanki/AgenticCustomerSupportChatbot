@@ -76,5 +76,20 @@ namespace AgenticAPI.Infrastructure
                 throw new Exception(ex.Message);
             }
         }
+
+        public async Task<bool> CheckCustomerExists(string customerId)
+        {
+            try
+            {
+                var filter = Builders<BsonDocument>.Filter.Eq("CustomerId", customerId);
+                var count = await _accountsCollection.CountDocumentsAsync(filter);
+
+                return count == 1;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(ex.Message);
+            }
+        }
     }
 }

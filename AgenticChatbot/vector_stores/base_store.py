@@ -1,19 +1,22 @@
-from langchain_chroma import Chroma
+from langchain_qdrant import QdrantVectorStore
+from langchain_core.vectorstores.base import VectorStore
+from qdrant_client import QdrantClient
+from qdrant_client.http.models import Distance, VectorParams
 from langchain_openai import OpenAIEmbeddings
 from langchain_core.documents import Document
 from typing import (
-    List
+    List,
+    Tuple,
 )
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import os
 import glob
 import pandas as pd
 import hashlib
-from typing import Tuple
-from utils import get_extracted_documents
 from langchain_community.document_loaders import AzureAIDocumentIntelligenceLoader
 from dotenv import load_dotenv, find_dotenv
 from pydantic import SecretStr
+
 
 class BaseVectorStore:
     def __init__(
@@ -26,7 +29,7 @@ class BaseVectorStore:
     ):
         load_dotenv(find_dotenv(raise_error_if_not_found= True))
         self.source_directory = source_directory
-        self.embeddings = OpenAIEmbeddings(model= "text-embedding-3-small", api_key= SecretStr(os.getenv("OPENAI_API_KEY", "")))
+        self.embeddings = OpenAIEmbeddings(model= "text-embedding-3-large", api_key= SecretStr(os.getenv("OPENAI_API_KEY", "")))
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
         self.db_directory = persist_directory
@@ -59,13 +62,23 @@ class BaseVectorStore:
         chunks = text_splitter.split_documents(documents)
         return chunks
     
-    def get_vector_store(self) -> Chroma:
-        vector_store = Chroma(
-            embedding_function= self.embeddings,
-            persist_directory= self.db_directory,
-            collection_name= self.collection
+    def get_vector_store(self) -> VectorStore:
+        client = QdrantClient(path= self.db_directory)
+        collections = client.get_collections()
+        if self.collection not in [col.name for col in collections.collections]:
+            client.create_collection(
+                collection_name= self.collection,
+                vectors_config= VectorParams(size= 3072, distance= Distance.COSINE)
+            )
+        
+        
+        vector_store = QdrantVectorStore(
+            client= client,
+            collection_name= self.collection,
+            embedding= self.embeddings
         )
         return vector_store
+    
     
     def fetch_to_delete_and_update(self, current_index: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """
@@ -87,8 +100,8 @@ class BaseVectorStore:
         to_update = current_index[~current_index['HashCode'].isin(self.index['HashCode'])]
 
         return (to_delete, to_update)
-
-
+    
+    
     def update_vector_store(self):
         if not os.path.exists(self.db_directory):
             os.makedirs(self.db_directory)
@@ -98,28 +111,31 @@ class BaseVectorStore:
         to_delete, to_update = self.fetch_to_delete_and_update(current_index)
         
         # Deleting outdated documents from vector store
-        for index, row in to_delete.iterrows():
+        for _, row in to_delete.iterrows():
             hash_to_delete = row['HashCode']
             vector_store.delete(where= {
                 "HashCode": hash_to_delete
             })
         
-        extracted_documents = []
+        
         # Adding updated docs to the vector db
-        for index, row in to_update.iterrows():
+        for _, row in to_update.iterrows():
             meta_data = row.to_dict()
             loader = AzureAIDocumentIntelligenceLoader(
                 api_endpoint= os.getenv("AZURE_DOCUMENT_ENDPOINT", ""),
                 api_key= os.getenv("AZURE_DOCUMENT_API_KEY"),
                 file_path= row['Source'],
-                api_model= 'prebuilt-read'
+                api_model= 'prebuilt-read',
+                mode= 'page'
             )
 
+            extracted_documents = []
             documents = loader.load()
             for doc in documents:
-                extracted_documents.extend(get_extracted_documents(document= doc, metadata= meta_data))
-
-        chunks = self.split_documents(extracted_documents)
-        vector_store.add_documents(chunks)
+                extracted_documents.append(Document(page_content= doc.page_content, metadata= meta_data))
+            
+            chunks = self.split_documents(extracted_documents)
+            vector_store.add_documents(chunks)
+        
         
         current_index.to_csv(os.path.join(self.source_directory, 'index.csv'), index= False)
