@@ -11,6 +11,8 @@ from langchain_core.messages.tool import ToolMessage
 from langgraph.prebuilt import InjectedState
 from langgraph.types import Command
 import requests
+import certifi
+import ssl
 import urllib3
 urllib3.disable_warnings()
 
@@ -27,6 +29,8 @@ def validate_customer_id(customer_id: str, tool_call_id: Annotated[str, Injected
     """
 
 
+    print(f"Validating customer id {customer_id}")
+
     context = ssl.create_default_context(cafile= certifi.where())
     headers = {"customerId": customer_id}
     response = requests.get(Endpoints.GET_CUSTOMER_BY_ID, headers= headers, verify= False)
@@ -37,10 +41,11 @@ def validate_customer_id(customer_id: str, tool_call_id: Annotated[str, Injected
         tool_message = ToolMessage(content= tool_content, tool_call_id= tool_call_id)
         
         command = Command(update= {
-            "messages": state["messages"] + [tool_message],
+            "messages": [
+                tool_message
+            ],
             "customer": customer.model_dump(mode= 'json'),
-            "validated": True,
-            "is_last_step": True
+            "validated": True
         })
     else:
         status = response.status_code
@@ -49,9 +54,12 @@ def validate_customer_id(customer_id: str, tool_call_id: Annotated[str, Injected
         tool_message = ToolMessage(content= tool_content, tool_call_id= tool_call_id)
         
         command = Command(update= {
-            "messages": state["messages"] + [tool_message],
+            "messages": [
+                tool_message
+            ],
             "customer": None,
-            "validated": False,
+            "validated": False
         })
+    
     
     return command
