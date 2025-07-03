@@ -2,8 +2,8 @@ from base_store import BaseVectorStore
 import os
 import shutil
 
-payments_docs_source = r"C:\Users\yash\source\AgenticCustomerSupportChatbot\docs\Payments"
-profile_docs_source = r"C:\Users\yash\source\AgenticCustomerSupportChatbot\docs\Profile"
+payments_docs_source = r"docs\Payments"
+profile_docs_source = r"docs\Profile"
 
 
 def update_vector_stores():

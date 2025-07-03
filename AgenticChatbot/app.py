@@ -10,12 +10,36 @@ from uuid import uuid4
 import asyncio
 
 from graph import build_model, invoke_model
-from speech_processing import recognize_from_microphone
+from speech_processing import recognize_from_microphone, text_to_microphone
 from chat_logic import *
 from utils import chat_title_generation
 from datetime import datetime, timezone
 
 from pdf_generation import generate_loan_statement_pdf
+from utils import ivr_message_generation
+
+
+async def stream_text_output(text: str):
+    """
+    Stream text letter by letter in a parent st.chat_message().
+    """
+    message_placeholder = st.empty()
+    displayed_text = ""
+
+    for char in text:
+        displayed_text += char
+        message_placeholder.markdown(displayed_text + "▌")  # add cursor for effect
+        time.sleep(0.02)  # use time.sleep for Streamlit, not asyncio
+
+    message_placeholder.markdown(displayed_text)  # remove cursor
+
+
+async def stream_output_with_audio(content):
+    ivr_message = ivr_message_generation(content)
+    await asyncio.gather(
+        text_to_microphone(ivr_message),
+        stream_text_output(content)
+    )
 
 async def load_messages(messages: List[Dict[str, Any]]):
     """
@@ -56,7 +80,7 @@ async def handle_prompt(prompt: str):
     response = invoke_model(model, input_state= st.session_state.state, config= config)
     ai_msg = response["messages"][-1]
     st.session_state.state = response
-    st.session_state.messages.append({"role": "assistant", "content": ai_msg.content})
+    st.session_state.messages.append({"role": "assistant", "content": ai_msg.content, "to_stream": True})
 
     if st.session_state.state["validated"] == True and st.session_state["current_chat"] is not None:
         messages_to_add.append({
@@ -105,9 +129,15 @@ async def run_app():
     for i, msg in enumerate(st.session_state.messages):
         role = msg.get("role")
         content = msg.get("content")
+        to_stream = msg.get("to_stream", False)
         with st.chat_message(role):
-            if validated and role == "assistant" and "Here is your loan statement" in content:
+            if to_stream:
+                await stream_output_with_audio(content)
+                msg["to_stream"] = False
+            else:
                 st.markdown(content)
+                
+            if validated and role == "assistant" and "Here is your loan statement" in content:
                 pdf_bytes = generate_loan_statement_pdf(st.session_state.state["customer"]["customerId"])
                 st.download_button(
                     label="Download PDF",
@@ -116,10 +146,6 @@ async def run_app():
                     mime="application/pdf",
                     key=f"loan_pdf_{i}"
                 )
-            else:
-                st.markdown(content)
-
-
 
     
     if st.session_state.state["validated"] is None and len(st.session_state.state["messages"]) == 0:
@@ -138,11 +164,11 @@ async def run_app():
                 speech_to_text = stx.button(":material/mic:", key="recording_in_progress")
                 if speech_to_text:
                     if "transcription_results" not in st.session_state:
-                        st.session_state.transcription_results = recognize_from_microphone(st.session_state)
+                        recognize_from_microphone()
                 else:
                     if "transcription_results" in st.session_state:
                         with st.spinner("Processing..."):
-                            time.sleep(5)
+                            time.sleep(7)
                             speech_contents = ' '.join(st.session_state.transcription_results)
                             del st.session_state.transcription_results
                         await handle_prompt(speech_contents)
