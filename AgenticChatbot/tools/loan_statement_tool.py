@@ -32,9 +32,10 @@ def get_loan_statement(
     customer_id = state["customer"]["customerId"]
     data = fetch_loan_statement(customer_id)
 
-    for p in data.paymentHistory:
-        if not isinstance(p.paymentDate, datetime):
-            p.paymentDate = isoparse(p.paymentDate)
+    if data.paymentHistory:
+        for p in data.paymentHistory: 
+            if not isinstance(p.paymentDate, datetime):
+                p.paymentDate = isoparse(p.paymentDate)
 
     if not data.success:
         statement_text = f"Could not fetch loan statement: {', '.join(data.errors or ['Unknown error'])}"

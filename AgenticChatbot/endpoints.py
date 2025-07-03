@@ -18,3 +18,5 @@ class Endpoints:
     GET_MESSAGES_BY_CHAT_ID = "https://localhost:7260/api/Chat/{chatId}"
 
     SET_CHAT_SUMMARY = "https://localhost:7260/api/Chat/SetChatSummary"
+
+    FETCH_LOAN_STATEMENT = "https://localhost:7260/api/LoanStatement"
