@@ -24,17 +24,17 @@ namespace AgenticAPI.Application.GetLoanStatement
         public double EmiAmount { get; set; }
         public DateTime StartDate { get; set; }
         public string? Status { get; set; }
-        public DateTime NextEmiDueDate { get; set; }
-        public double OutstandingBalance { get; set; }
     }
 
     public class LoanPayment
-    {
+    {     
         public DateTime PaymentDate { get; set; }
-        public double AmountPaid { get; set; }
-        public double Principal { get; set; }
-        public double Interest { get; set; }
-        public string? PaymentMode { get; set; }
-        public string? Status { get; set; }
+        public double PaymentAmount { get; set; }
+        public double InterestPaid { get; set; }
+        public double PrincipalPaid { get; set; }
+        public double PreviousPrincipal { get; set; }
+        public double CurrentPrincipal { get; set; }
+        public string PaymentMode { get; set; }
+        public string TransactionId { get; set; }
     }
 }

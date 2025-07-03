@@ -4,6 +4,8 @@ from agents.supervisor_agent import get_supervisor_agent
 from agents.query_agent import get_query_agent
 from agents.welcome_agent import get_welcome_agent
 from agents.summary_agent import get_summary_agent
+from agents.loan_agent import get_loan_statement_agent  
+from agents.loan_management_agent import get_loan_management_agent
 
 from typing import Dict, Any
 from langgraph.graph import StateGraph, START, END
@@ -27,23 +29,25 @@ def build_model() -> CompiledGraph:
                 return "end"
 
     
-    
-    
     checkpointer= InMemorySaver()
     update_agent = get_update_agent()
     query_agent = get_query_agent()
     summary_agent = get_summary_agent()
-    members = ["update_agent", "query_agent", "summary_agent"]
+    loan_statement_agent = get_loan_statement_agent()
+    loan_management_agent = get_loan_management_agent()
+    members = ["summary_agent", "update_agent", "query_agent", "loan_statement_agent", "loan_management_agent"]
     supervisor_agent = get_supervisor_agent(members= members)
     welcome_agent = get_welcome_agent()
 
     graph = (
         StateGraph(GraphState)
         .add_node(welcome_agent)
-        .add_node(supervisor_agent, destinations= ("update_agent", "query_agent", "summary_agent", END))
+        .add_node(supervisor_agent, destinations= ("summary_agent", "update_agent", "query_agent", "loan_statement_agent", "loan_management_agent", END))
         .add_node(update_agent)
         .add_node(query_agent)
         .add_node(summary_agent)
+        .add_node(loan_statement_agent)
+        .add_node(loan_management_agent)
         .add_conditional_edges(
             START, router,
             {
@@ -56,6 +60,9 @@ def build_model() -> CompiledGraph:
         .add_edge("update_agent", "supervisor")
         .add_edge("query_agent", "supervisor")
         .add_edge("summary_agent", "supervisor")
+        .add_edge("update_agent", "supervisor")
+        .add_edge("loan_statement_agent", "supervisor")
+        .add_edge("loan_management_agent", "supervisor")
     ).compile(checkpointer= checkpointer)
 
     return graph
@@ -64,4 +71,3 @@ def build_model() -> CompiledGraph:
 def invoke_model(model: CompiledGraph, input_state: Dict[str, Any], config: RunnableConfig) -> Dict[str, Any]:
     response = model.invoke(input_state, config= config)
     return model.get_state(config= config).values
-

@@ -15,6 +15,8 @@ from chat_logic import *
 from utils import chat_title_generation
 from datetime import datetime, timezone
 
+from pdf_generation import generate_loan_statement_pdf
+
 async def load_messages(messages: List[Dict[str, Any]]):
     """
     Load messages into the Streamlit chat interface.
@@ -100,11 +102,24 @@ async def run_app():
         st.session_state.current_chat = None
     
 
-    for msg in st.session_state.messages:
+    for i, msg in enumerate(st.session_state.messages):
         role = msg.get("role")
         content = msg.get("content")
         with st.chat_message(role):
-            st.markdown(content)
+            if validated and role == "assistant" and "Here is your loan statement" in content:
+                st.markdown(content)
+                pdf_bytes = generate_loan_statement_pdf(st.session_state.state["customer"]["customerId"])
+                st.download_button(
+                    label="Download PDF",
+                    data=pdf_bytes,
+                    file_name="loan_statement.pdf",
+                    mime="application/pdf",
+                    key=f"loan_pdf_{i}"
+                )
+            else:
+                st.markdown(content)
+
+
 
     
     if st.session_state.state["validated"] is None and len(st.session_state.state["messages"]) == 0:

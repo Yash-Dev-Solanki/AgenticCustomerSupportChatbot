@@ -17,8 +17,6 @@ public class LoanMappingProfile : Profile
             .ForMember(dest => dest.TenureMonths, opt => opt.MapFrom(src => src.TenureMonths))
             .ForMember(dest => dest.EmiAmount, opt => opt.MapFrom(src => src.EmiAmount))
             .ForMember(dest => dest.StartDate, opt => opt.MapFrom(src => src.StartDate))
-            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status))
-            .ForMember(dest => dest.NextEmiDueDate, opt => opt.MapFrom(src => src.NextEmiDueDate))
-            .ForMember(dest => dest.OutstandingBalance, opt => opt.MapFrom(src => src.OutstandingBalance));
+            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status));
     }
 }

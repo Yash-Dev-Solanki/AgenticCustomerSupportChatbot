@@ -1,0 +1,17 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Streamlit app",
+      "type": "python",
+      "request": "launch",
+      "module": "streamlit",
+      "args": [
+        "run",
+        "agenticchatbot/app.py" // <-- Change this path if your main file is elsewhere
+      ],
+      "console": "integratedTerminal",
+      "justMyCode": false
+    }
+  ]
+}

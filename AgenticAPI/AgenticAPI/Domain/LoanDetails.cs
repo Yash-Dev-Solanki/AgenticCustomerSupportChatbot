@@ -19,7 +19,5 @@ namespace AgenticAPI.Domain
         public double EmiAmount { get; set; }
         public DateTime StartDate { get; set; }
         public string Status { get; set; }
-        public DateTime NextEmiDueDate { get; set; }
-        public double OutstandingBalance { get; set; }
     }
 }
