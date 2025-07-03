@@ -28,8 +28,8 @@ def get_query_agent() -> CompiledGraph:
             f"""
             You're a query handler  management agent tasked with routing the user query to the appropriate query handlers.
             You're equipped with following handlers:
-            - profile_data_query_handler: invokes the Customer Relation Summary (CRS) RAG to retrieve & generate response to user query related to CRS regarding Corporate & Investment Banking and respond with appropriate context
-            - payments_data_query_handler: invokes the Deposit Account Agreement RAG to retrieve & generate response to user queries realted to Consumer Services such as Opening Accounts, Depositing Funds, Credit Cards, etc.
+            - profile_data_query_handler: invokes the Customer Profile Summary RAG to retrieve & generate response to user query related to details regarding Customer Profile
+            - payments_data_query_handler: invokes the Banking Payments RAG to retrieve & generate response to user queries realted to Payment Operations peformed by the bank
 
             INSTRUCTIONS:
             1. Return the response as is fetched by the appropriate query agents.

@@ -22,6 +22,12 @@ summary_model = ChatOpenAI(
     api_key= SecretStr(os.getenv("OPENAI_API_KEY", ""))
 )
 
+ivr_model = ChatOpenAI(
+    model= "gpt-4.1-nano",
+    temperature= 0,
+    api_key= SecretStr(os.getenv("OPENAI_API_KEY", ""))
+)
+
 TITLE_GENERATION_PROMPT = """
 You are an AI assistant tasked with generating a concise and descriptive title for a chat session based on the initial prompt provided by the user. Do not include any additional information or context beyond the title itself. Do not make use of newline or carriage return characters.
 
@@ -65,3 +71,25 @@ def chat_summary_generation(messages : List[Dict]) -> str:
     chain = SUMMARY_GENERATION_PROMPT | summary_model | StrOutputParser()
     summary = chain.invoke({"messages": messages})
     return summary.strip()
+
+
+def ivr_message_generation(content: str) -> str:
+    """
+    Converts the given content into a shorter message that can easily read by the ivr system
+    Args:
+        content: The original message content
+    Returns:
+        str: Shortened IVR friendly message
+    """
+
+    IVR_PROMPT = ChatPromptTemplate.from_messages(
+        [
+            ("system", "Shorten the following message to a message that can be communicated by an IVR teleprompter. Make sure to not omit important details."),
+            ("user", "{content}"),
+        ]
+    )
+
+    chain = IVR_PROMPT | ivr_model | StrOutputParser()
+    return chain.invoke({"content": content}).strip()
+
+

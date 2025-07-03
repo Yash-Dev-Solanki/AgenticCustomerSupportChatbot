@@ -80,6 +80,27 @@ def fetch_messages_by_chat_id(chatId: str) -> List[Dict]:
         return []
 
 
+def fetch_summary_for_chat_id(chatId: str) -> str:
+    url = Endpoints.GET_MESSAGES_BY_CHAT_ID.format(chatId= chatId)
+
+    try:
+        response = requests.get(
+            url,
+            verify= False
+        )
+        data = response.json()
+        if response.status_code == 200:
+            summary = data['chat']['summary']
+            return summary if summary else ""
+             
+        else:
+            print(f"[ERROR] fetch_messages_by_chat_id failed with status {response.status_code}: {data['errors']}")
+            return ""
+    except Exception as e:
+        print("[EXCEPTION] Could not complete request", e)
+        return ""
+
+
 def add_summary_to_chat(chatId: str, summary: str) -> bool:
     url = Endpoints.SET_CHAT_SUMMARY
     headers = {
@@ -133,17 +154,18 @@ def setup_summary_cache(state: Annotated[Dict[str, Any], InjectedState]) -> List
         if created_at < cutoff:
             break
 
-        if chat['chatId'] in cache:
-            chat['summary'] = cache[chat['chatId']]
-            summaries.append(chat)
-        else:
+        if chat['chatId'] not in cache:
             messages = fetch_messages_by_chat_id(chat['chatId'])
-            summary = chat_summary_generation(messages)
-            add_summary_to_chat(chat['chatId'], summary)
-            cache[chat['chatId']] = summary
-            chat['summary'] = cache[chat['chatId']]
-            summaries.append(chat)
-    
+            current_summary = fetch_summary_for_chat_id(chat['chatId'])
+            if current_summary:
+                summary = current_summary
+            else:
+                summary = chat_summary_generation(messages)
+                add_summary_to_chat(chat['chatId'], summary)
+                cache[chat['chatId']] = summary
+        
+        chat['summary'] = cache[chat['chatId']]
+        summaries.append(chat)
 
     return summaries
 
