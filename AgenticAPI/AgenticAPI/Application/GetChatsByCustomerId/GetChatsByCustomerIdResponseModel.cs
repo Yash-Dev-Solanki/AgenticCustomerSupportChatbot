@@ -5,7 +5,7 @@ namespace AgenticAPI.Application.GetChatsByCustomerId
 {
     public class GetChatsByCustomerIdResponseModel: BaseResponseModel
     {
-        public List<string>? ChatIds { get; set; }
+        public List<ChatSummary>? Chats { get; set; }
 
         public GetChatsByCustomerIdResponseModel(): base()
         {

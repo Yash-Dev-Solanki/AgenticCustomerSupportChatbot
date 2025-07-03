@@ -79,6 +79,7 @@ class BaseVectorStore:
         )
         return vector_store
     
+    
     def fetch_to_delete_and_update(self, current_index: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """
         Identify records to delete and update by comparing current index with existing index.

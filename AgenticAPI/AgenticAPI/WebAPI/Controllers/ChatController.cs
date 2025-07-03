@@ -7,6 +7,7 @@ using MediatR;
 using System.ComponentModel.DataAnnotations;
 using AgenticAPI.Application.GetChatById;
 using AgenticAPI.Application.GetChatsByCustomerId;
+using AgenticAPI.Application.UpdateChatSummary;
 
 namespace AgenticAPI.WebAPI.Controllers
 {
@@ -29,11 +30,11 @@ namespace AgenticAPI.WebAPI.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         [ActionName("CreateChat")]
-        public async Task<IActionResult> CreateChat([FromHeader][Required] string customerId)
+        public async Task<IActionResult> CreateChat([FromHeader][Required] string customerId, [FromHeader][Required] string chatTitle)
         {
             try
             {
-                var request = new CreateChatRequestModel { CustomerId = customerId };
+                var request = new CreateChatRequestModel { CustomerId = customerId, ChatTitle = chatTitle };
                 var response = await _mediator.Send(request);
 
                 if (response.StatusCode == System.Net.HttpStatusCode.Created)
@@ -146,6 +147,36 @@ namespace AgenticAPI.WebAPI.Controllers
             {
                 return StatusCode(500, ex.Message);
             } 
+        }
+
+        [HttpPost("SetChatSummary")]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ActionName("SetChatSummary")]
+        public async Task<IActionResult> SetChatSummary([FromBody] UpdateChatSummaryRequestModel request)
+        {
+            try
+            {
+                var response = await _mediator.Send(request);
+
+                if (response.StatusCode == System.Net.HttpStatusCode.Created)
+                {
+                    return Created("Chat Summary Set: ", response);
+                }
+                else if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+                {
+                    return BadRequest(response);
+                }
+                else
+                {
+                    return StatusCode(500, "Could not access DB");
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
         }
     }
 }

@@ -119,6 +119,46 @@ namespace AgenticAPI.WebAPI.Controllers
             }
         }
 
+        [HttpGet("VerifyCustomer")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> VerifyCustomer([FromHeader][Required] string customerId, [FromHeader][Required] string phoneInfoLastFourDigits)
+        {
+            try
+            {
+                var request = new GetCustomerRawRequestModel { CustomerId = customerId };
+                var response = await _mediator.Send(request);
+
+                if (response.StatusCode == HttpStatusCode.BadRequest)
+                {
+                    return BadRequest(response);
+                }
+
+                string? extractedHomePhone = response?.Customer?.PhoneInfo?.GetExtractedHomePhone();
+                string? extractedWorkPhone = response?.Customer?.PhoneInfo?.GetExtractedWorkPhone();
+
+                bool isValid = (phoneInfoLastFourDigits == extractedHomePhone || phoneInfoLastFourDigits == extractedWorkPhone);
+                if (isValid)
+                {
+                    return Ok(response);
+                }
+                else
+                {
+                    response.Customer = null;
+                    response.StatusCode = HttpStatusCode.Unauthorized;
+                    response.Success = false;
+                    response.Errors.Add("Mismatch in phone info provided & phone info in DB");
+                    return Unauthorized(response);
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = "Internal Server Error", message = ex.StackTrace });
+            }
+        }
+
         [HttpPost("UpdateEmail")]
         [ProducesResponseType(StatusCodes.Status202Accepted)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]

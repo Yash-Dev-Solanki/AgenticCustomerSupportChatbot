@@ -28,7 +28,7 @@ namespace AgenticAPI.Application.GetChatsByCustomerId
                 else
                 {
                     response.StatusCode = System.Net.HttpStatusCode.OK;
-                    response.ChatIds = result;
+                    response.Chats = result;
                 } 
             }
             catch (Exception ex)

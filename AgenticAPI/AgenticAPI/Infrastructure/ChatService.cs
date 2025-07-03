@@ -2,6 +2,7 @@ using System;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using AgenticAPI.Domain;
+using MongoDB.Bson.Serialization;
 
 
 namespace AgenticAPI.Infrastructure
@@ -42,21 +43,30 @@ namespace AgenticAPI.Infrastructure
             }
         }
         
-        public async Task<List<string>> GetChatsByCustomerId(string customerId)
+        public async Task<List<ChatSummary>> GetChatsByCustomerId(string customerId)
         {
             try
             {
                 var filter = Builders<BsonDocument>.Filter.Eq("CustomerId", customerId);
                 var projection = Builders<BsonDocument>.Projection
-                    .Include("ChatId");
+                    .Include("ChatId")
+                    .Include("ChatTitle")
+                    .Include("CreatedAt");
                 var documents = await _chatCollection.Find(filter).Project(projection).ToListAsync();
 
-                return documents.Select(c => c["ChatId"].AsString).ToList();
+                var result = documents.Select(doc => new ChatSummary
+                {
+                    ChatId = doc.GetValue("ChatId", BsonNull.Value).AsString,
+                    ChatTitle = doc.GetValue("ChatTitle", BsonNull.Value).AsString,
+                    CreatedAt = doc.GetValue("CreatedAt", BsonNull.Value).ToUniversalTime()
+                }).ToList();
+
+                return result;
             }
             catch (Exception ex)
             {
                 Console.WriteLine("GetChatsByCustomerId failed: " + ex.Message);
-                return new List<string>();
+                return new List<ChatSummary>();
             }
         }
 
@@ -102,6 +112,33 @@ namespace AgenticAPI.Infrastructure
             catch (Exception ex)
             {
                 Console.WriteLine("AddMessagesToChat failed: " + ex.Message);
+                throw new Exception(ex.Message, ex);
+            }
+        }
+
+        public async Task<Chat?> UpdateChatDetails(string chatId, string fieldToUpdate, object newValue)
+        {
+            try
+            {
+                var filter = Builders<BsonDocument>.Filter.Eq("ChatId", chatId);
+                var chat = await _chatCollection.Find(filter).FirstOrDefaultAsync();
+
+                if (chat == null)
+                {
+                    throw new ArgumentException("ChatId could not be found");
+                }
+
+                chat[fieldToUpdate] = BsonValue.Create(newValue);
+                await _chatCollection.ReplaceOneAsync(filter, chat);
+                return BsonSerializer.Deserialize<Chat>(chat);
+            }
+            catch (ArgumentException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Failed to Update Chat Details: " + ex.Message);
                 throw new Exception(ex.Message, ex);
             }
         }

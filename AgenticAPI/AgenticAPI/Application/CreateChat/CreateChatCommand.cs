@@ -36,6 +36,7 @@ namespace AgenticAPI.Application.CreateChat
                 var newChat = new Chat
                 {
                     ChatId = Guid.NewGuid().ToString(),
+                    ChatTitle = request.ChatTitle,
                     CustomerId = request.CustomerId,
                     CreatedAt = DateTime.UtcNow,
                     Messages = new List<ChatMessage>()

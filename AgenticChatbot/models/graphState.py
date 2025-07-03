@@ -11,6 +11,5 @@ from langgraph.prebuilt.chat_agent_executor import AgentState
 class GraphState(AgentState):
     customer: Optional[Dict[str, Any]]
     validated: Optional[bool]
-    messages: Optional[List[BaseMessage]]
     validation_retries: int
     current_retries: int

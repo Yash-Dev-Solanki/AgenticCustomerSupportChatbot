@@ -56,9 +56,7 @@ def validate_customer_id(customer_id: str, tool_call_id: Annotated[str, Injected
                 tool_message
             ],
             "customer": None,
-            "validated": False
+            "validated": False,
         })
     
-    
-    print(state["messages"])
     return command

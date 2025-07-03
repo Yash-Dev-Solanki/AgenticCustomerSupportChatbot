@@ -11,8 +11,11 @@ namespace AgenticAPI.Domain
     {
         public string? ChatId { get; set; }
         public string? CustomerId { get; set; }
+        public string? ChatTitle { get; set; }
         public DateTime CreatedAt { get; set; }
         public List<ChatMessage> Messages { get; set; } = new List<ChatMessage>();
+
+        public string? Summary { get; set; }
     }
 }
 
