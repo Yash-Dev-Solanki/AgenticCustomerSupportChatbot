@@ -27,6 +27,7 @@ def get_update_agent():
             - After you're done, respond to the supervisor directly
             - Respond ONLY with the results, do NOT include ANY other text.
             - DO NOT ASSUME ANY DEFAULT VALUES.
+            - If you don't have enough information to complete the task, ask the supervisor for more details.
             """
         ),
         name= "update_agent",

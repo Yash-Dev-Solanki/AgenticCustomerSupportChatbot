@@ -3,166 +3,232 @@ from dotenv import load_dotenv
 import os
 import streamlit as st
 import streamlit_extras.stateful_button as stx
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import HumanMessage, AIMessage
+from typing import List, Dict, Any
+from langchain_core.runnables import RunnableConfig
+from uuid import uuid4
+import asyncio
+from services.pdf_generation import generate_pdf_bytes, generate_excel_bytes
 import re
 from graph import build_model, invoke_model
-from speech_processing import recognize_from_microphone
-from pdf_generation import generate_loan_statement_pdf
-from chat_logic import fetch_all_chats, fetch_chat_messages, save_chat_messages, create_new_chat
-import asyncio
+from speech_processing import recognize_from_microphone, text_to_microphone
+from services.chat_logic import *
+from utils import chat_title_generation
+from datetime import datetime, timezone
+
+from utils import ivr_message_generation
 
 
-def handle_prompt(prompt: str):
-    if "current_chat_id" not in st.session_state or not st.session_state.current_chat_id:
-        new_chat_id = asyncio.run(create_new_chat(st.session_state.state["customer"]["customerId"]))
-        st.session_state.current_chat_id = new_chat_id
-        st.session_state.chats = load_chats(st.session_state.state["customer"]["customerId"])
-        st.session_state.messages = []
-        st.session_state.to_be_saved_messages = []
-        st.session_state.state["messages"] = []
+async def stream_text_output(text: str):
+    """
+    Stream text letter by letter in a parent st.chat_message().
+    """
+    message_placeholder = st.empty()
+    displayed_text = ""
 
+    for char in text:
+        displayed_text += char
+        message_placeholder.markdown(displayed_text + "▌")  # add cursor for effect
+        time.sleep(0.02)  # use time.sleep for Streamlit, not asyncio
+
+    message_placeholder.markdown(displayed_text)  # remove cursor
+
+
+async def stream_output_with_audio(content):
+    ivr_message = ivr_message_generation(content)
+    await asyncio.gather(
+        text_to_microphone(ivr_message),
+        stream_text_output(content),
+        return_exceptions= False
+    )
+
+async def load_messages(messages: List[Dict[str, Any]]):
+    """
+    Load messages into the Streamlit chat interface.
+    """
+    
+    for msg in messages:
+        if msg["role"] == "user":
+            st.session_state.state["messages"].append(HumanMessage(content= msg["message"]))
+            st.session_state.messages.append({"role": "user", "content": msg["message"]})
+        elif msg["role"] == "assistant":
+            st.session_state.state["messages"].append(AIMessage(content= msg["message"]))
+            st.session_state.messages.append({"role": "assistant", "content": msg["message"]})
+
+
+async def handle_prompt(prompt: str):
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    st.session_state.state["messages"].append(HumanMessage(content=prompt))
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    st.session_state.to_be_saved_messages.append({"role": "user", "content": prompt})
+    messages_to_add = []
+    if not (prompt is None or prompt.strip() == ""):       
+        st.session_state.state["messages"].append(HumanMessage(content=prompt))
+        st.session_state.messages.append({"role": "user", "content": prompt})
 
-    response = invoke_model(model, input_state=st.session_state.state)
+        if st.session_state.state["validated"] == True:
+            if st.session_state.current_chat is None:
+                chat_title = chat_title_generation(prompt)
+                st.session_state.current_chat = await create_new_chat(
+                    st.session_state.state["customer"]["customerId"],
+                    chat_title,
+                )
+            
+            messages_to_add.append({
+                "role": "user", 
+                "message": prompt, 
+                "timestamp": datetime.now(timezone.utc).isoformat()})
+
+    response = invoke_model(model, input_state= st.session_state.state, config= config)
     ai_msg = response["messages"][-1]
+    st.session_state.state = response
+    st.session_state.messages.append({"role": "assistant", "content": ai_msg.content, "to_stream": True})
 
-    st.session_state.state["messages"].append(ai_msg)
-    st.session_state.messages.append({"role": "assistant", "content": ai_msg.content})
-    st.session_state.to_be_saved_messages.append({"role": "assistant", "content": ai_msg.content})  
-    asyncio.run(save_chat_messages(
-        st.session_state.current_chat_id,
-        st.session_state.state["customer"]["customerId"],
-        st.session_state.to_be_saved_messages
-    ))
-    st.session_state.chats = load_chats(st.session_state.state["customer"]["customerId"])
-    st.session_state.to_be_saved_messages = []
+    if st.session_state.state["validated"] == True and st.session_state["current_chat"] is not None:
+        messages_to_add.append({
+            "role": "assistant",
+            "message": ai_msg.content,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        })
+
+        await add_messages_to_chat(
+            chat_id= st.session_state.current_chat,
+            messages= messages_to_add
+        )
+        
     st.rerun()
 
 
-def load_chats(customer_id):
-    if not customer_id:
+
+def parse_markdown_table(md_table: str):
+    lines = [line.strip() for line in md_table.strip().splitlines() if line.strip()]
+    # Remove separator lines like: |-----|------|
+    lines = [line for line in lines if not set(line) <= {'|', '-', ' '}]
+    if not lines:
         return []
+    header = [h.strip() for h in lines[0].strip('|').split('|')]
+    data_rows = []
+    for line in lines[1:]:
+        cols = [c.strip() for c in line.strip('|').split('|')]
+        if len(cols) == len(header):
+            data_rows.append(dict(zip(header, cols)))
+    return data_rows
 
-    chats = asyncio.run(fetch_all_chats(customer_id))
-    if not chats:
-        return []
-    return sorted(chats, key=lambda c: c.get("createdAt", c.get("chatId", "")), reverse=True)
 
-
-def load_chat_messages_to_state(messages):
-    converted = []
-    for m in messages:
-        role = m.get("role") or m.get("sender")
-        content = m.get("content") or m.get("message")
-        if role == "user":
-            converted.append(HumanMessage(content=content))
-        else:
-            converted.append(AIMessage(content=content))
-    return converted
-
-def run_app():
+async def run_app():
+    validated = None
+    if "state" in st.session_state:
+        validated = st.session_state.state.get("validated", None)
+    
+    if validated == True:
+        st.set_page_config(initial_sidebar_state= "expanded")
+        st.session_state["chatHistory"] = await fetch_all_chats_by_customer_id(st.session_state.state["customer"]["customerId"])
+    else:
+        st.set_page_config(initial_sidebar_state= "collapsed")
+    
+    
     st.title("Concorde Finances")
     st.markdown("Providing Loan Customer Assistance")
 
-    customer_id_input = st.text_input("Enter Customer ID", key="customer_input")
-
-    if not customer_id_input:
-        st.info("Please enter your Customer ID above to start chatting.")
-        return
-
-    if ("state" not in st.session_state or
-        st.session_state.state.get("customer", {}).get("customerId") != customer_id_input):
-
+    if "state" not in st.session_state: 
         st.session_state.state = {
-            "messages": [AIMessage(content="How May I Help You?")],
-            "customer": {"customerId": customer_id_input},
-            "validated": None
+            "customer": None,
+            "validated": None,
+            "messages": [],
+            "validation_retries": 3,
+            "current_retries": 0,
         }
-        st.session_state.messages = [{"role": "assistant", "content": "How May I Help You?"}]
-        st.session_state.to_be_saved_messages = [{"role": "assistant", "content": "How May I Help You?"}]
-        st.session_state.chats = load_chats(customer_id_input)
-        st.session_state.current_chat_id = None
-
-    with st.sidebar:
-    
-        if st.button("New Chat"):
-            if st.session_state.get("current_chat_id"):
-                asyncio.run(save_chat_messages(
-                    st.session_state.current_chat_id,
-                    customer_id_input,
-                    st.session_state.to_be_saved_messages
-                ))
-                st.session_state.to_be_saved_messages = []
-
-            st.session_state.current_chat_id = None
-            st.session_state.messages = [{"role": "assistant", "content": "How May I Help You?"}]
-            st.session_state.to_be_saved_messages = [{"role": "assistant", "content": "How May I Help You?"}]
-            st.session_state.state["messages"] = [AIMessage(content="How May I Help You?")]
-            
-        st.header("Chats")
-        
-        for chat in st.session_state.chats:
-            label = chat.get("title", chat.get("chatId"))
-            if st.button(label, key=f"chat_{chat.get('chatId')}"):
-                if st.session_state.get("current_chat_id"):
-                    asyncio.run(save_chat_messages(
-                        st.session_state.current_chat_id,
-                        customer_id_input,
-                        st.session_state.to_be_saved_messages
-                    )) 
-                    st.session_state.to_be_saved_messages = []
-                st.session_state.current_chat_id = chat["chatId"]
-                messages = asyncio.run(fetch_chat_messages(customer_id_input, chat["chatId"]))
-                st.session_state.messages = messages if messages else []
-                st.session_state.to_be_saved_messages = []
-                st.session_state.state["messages"] = load_chat_messages_to_state(st.session_state.messages)
-
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+    if "current_chat" not in st.session_state:
+        st.session_state.current_chat = None
     
 
-    for i,msg in enumerate(st.session_state.messages):
-        role = msg.get("role") or msg.get("sender") or "assistant"
-        content = msg.get("content") or msg.get("message") or ""
+    for i, msg in enumerate(st.session_state.messages):
+        role = msg.get("role")
+        content = msg.get("content")
+        to_stream = msg.get("to_stream", False)
         with st.chat_message(role):
-            if role == "assistant" and "Here is your loan statement" in content:
-                st.markdown(content)
-                pdf_bytes = generate_loan_statement_pdf(customer_id_input)
-                st.download_button(
-                    label="Download PDF",
-                    data=pdf_bytes,
-                    file_name="loan_statement.pdf",
-                    mime="application/pdf",
-                    key=f"loan_pdf_{i}"
-                )
+            if to_stream:
+                await stream_output_with_audio(content)
+                msg["to_stream"] = False
             else:
                 st.markdown(content)
 
 
+            if validated and role == "assistant" and "Here is your loan statement" in content:
+                table_match = re.search(r"(\| No\..*?)(\n\n|$)", content, re.DOTALL)
+                if table_match:
+                    md_table = table_match.group(1)
+                    payments = parse_markdown_table(md_table)
+                    summary_part = content.split("| No.")[0].strip()
+                    if payments:
+                        pdf_bytes = generate_pdf_bytes(payments)
+                        st.download_button(
+                            label="Download PDF",
+                            data=pdf_bytes,
+                            file_name="loan_statement.pdf",
+                            mime="application/pdf",
+                            key=f"loan_pdf_{i}"
+                        )
+                        excel_bytes = generate_excel_bytes(payments)
+                        st.download_button(
+                            label="Download Excel",
+                            data=excel_bytes,
+                            file_name="loan_statement.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            key=f"loan_excel_{i}"
+                        )
 
+    
+    if st.session_state.state["validated"] is None and len(st.session_state.state["messages"]) == 0:
+        await handle_prompt("")
+
+    
     with st.container():
         col1, col2 = st.columns([4, 10], border=True)
         with col1:
             input_method = st.radio("Select Input Method", options=["Text", "Speech"])
-        with col2:
+        with col2:          
             if input_method == "Text":
                 if prompt := st.chat_input("Say Something"):
-                    handle_prompt(prompt)
+                    await handle_prompt(prompt)
             elif input_method == "Speech":
                 speech_to_text = stx.button(":material/mic:", key="recording_in_progress")
                 if speech_to_text:
                     if "transcription_results" not in st.session_state:
-                        st.session_state.transcription_results = recognize_from_microphone(st.session_state)
+                        recognize_from_microphone()
                 else:
                     if "transcription_results" in st.session_state:
                         with st.spinner("Processing..."):
-                            time.sleep(5)
+                            time.sleep(7)
                             speech_contents = ' '.join(st.session_state.transcription_results)
                             del st.session_state.transcription_results
-                        handle_prompt(speech_contents)
+                        await handle_prompt(speech_contents)
+    
+    with st.sidebar:
+        welcome_message = f"Welcome to Concorde Finances, {st.session_state.state['customer']['customerName'] if validated else 'Guest'}!"
+        st.header(welcome_message)
+        new_chat_button = st.button("New Chat", disabled= not validated, type= "primary")
+        if new_chat_button:
+            print("[DEBUG] New chat button clicked")
+            st.session_state.current_chat = None
+            st.session_state.messages = []
+            st.rerun()
+        
+        st.markdown("### Chat History")
+        for chat in st.session_state.get("chatHistory", []):
+            chatId = chat['chatId']
+            chatTitle = chat['chatTitle']
+            isCurrentChat = chatId == st.session_state.current_chat
+            load_chat_buton = st.button(chatTitle, key= chatId, disabled= isCurrentChat, type= "tertiary" if isCurrentChat else "secondary")
+            if load_chat_buton:
+                print(f"[DEBUG] Load chat button clicked for chatId: {chatId}")
+                st.session_state.state["messages"] = []
+                st.session_state.messages = []
+                st.session_state.current_chat = chatId
+                chat_messages = await fetch_messages_by_chat_id(chatId)
+                await load_messages(chat_messages)
+                st.rerun()
 
 
 if __name__ == "__main__":
@@ -173,4 +239,5 @@ if __name__ == "__main__":
         raise Exception("API Key not set in environment variables")
 
     model = build_model()
-    run_app()
+    config = RunnableConfig({"configurable": {"thread_id": str(uuid4())}})
+    asyncio.run(run_app())

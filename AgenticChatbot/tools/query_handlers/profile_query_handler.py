@@ -1,19 +1,15 @@
 from tools.query_handlers.RAG import RAG
-from langchain_chroma import Chroma
+from langchain_qdrant import QdrantVectorStore
+from qdrant_client import QdrantClient
 from langchain_openai import OpenAIEmbeddings
 from pydantic import SecretStr
 import os
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 from langchain_core.tools import BaseTool, tool
 
 
-load_dotenv()
-embeddings = OpenAIEmbeddings(model= "text-embedding-3-small", api_key= SecretStr(os.getenv("OPENAI_API_KEY", "")))
-profile_vector_store = Chroma(
-    collection_name= 'Profile',
-    embedding_function= embeddings,
-    persist_directory= './chroma/Profile'
-)
+load_dotenv(find_dotenv())
+embeddings = OpenAIEmbeddings(model= "text-embedding-3-large", api_key= SecretStr(os.getenv("OPENAI_API_KEY", "")))
 
 profile_prompt = '''
 You're an AI agent tasked with answering user queries related to Customer Relation Summary.
@@ -31,9 +27,6 @@ Question: {question}
 
 
 def get_profile_query_handler() -> BaseTool:
-    profile_rag = RAG(vector_store= profile_vector_store, prompt= profile_prompt)
-    profile_rag.create_rag()
-
     @tool(parse_docstring= True)
     def invoke_model(query: str):
         """
@@ -42,8 +35,23 @@ def get_profile_query_handler() -> BaseTool:
         Args:
             query (str): The question or query to be answered by the RAG model.
         """
+        # Setup Qdrant client and vector store
+        client = QdrantClient(path= "./qdrant/Profile")
+        profile_vector_store = QdrantVectorStore(
+            client= client,
+            collection_name= 'Profile',
+            embedding= embeddings,
+        )
+        profile_rag = RAG(vector_store= profile_vector_store, prompt= profile_prompt)
+        profile_rag.create_rag()
+
+        # Invoke the RAG model with the query
         print("Processing profile query")
         result = profile_rag.rag.invoke({"question": query})
+
+        # Clean up resources
+        del profile_vector_store
+        del client
         return result["answer"]
 
     

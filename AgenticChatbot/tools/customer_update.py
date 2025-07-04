@@ -62,7 +62,7 @@ def update_customer_payment_reminder(customer_id: str, payment_reminder: bool, t
 
     Args:
         customer_id (str): the customer Id to be looked up in the collection
-        payment_reminder (str): whether the customer wishes to opt into payment reminders
+        payment_reminder (bool): whether the customer wishes to opt into payment reminders
         tool_call_id (str): the id injected into into the tool call by the caller agent
         state: A state object containing relevant metadata that serves as short-term memory checkpointer for the agent
     """

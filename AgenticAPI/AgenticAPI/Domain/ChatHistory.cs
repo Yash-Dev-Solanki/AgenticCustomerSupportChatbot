@@ -6,20 +6,16 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace AgenticAPI.Domain
 {
+    [BsonIgnoreExtraElements]
     public class Chat
     {
-        [BsonId]
-        [BsonRepresentation(BsonType.ObjectId)]
-        public string ChatId { get; set; }
-        public string CustomerId { get; set; }
+        public string? ChatId { get; set; }
+        public string? CustomerId { get; set; }
+        public string? ChatTitle { get; set; }
         public DateTime CreatedAt { get; set; }
         public List<ChatMessage> Messages { get; set; } = new List<ChatMessage>();
-    }
-    public class ChatMessage
-    {
-        public string Sender { get; set; } 
-        public string Message { get; set; }
-        public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+
+        public string? Summary { get; set; }
     }
 }
 

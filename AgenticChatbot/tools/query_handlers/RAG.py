@@ -28,7 +28,7 @@ class RAG:
     ):
         load_dotenv()
         self.embedding_function = OpenAIEmbeddings(
-            model= "text-embedding-3-small",
+            model= "text-embedding-3-large",
             api_key= SecretStr(os.getenv('OPENAI_API_KEY', '')) 
         )
         self.vector_store = vector_store

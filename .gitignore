@@ -1,8 +1,13 @@
 **/chroma/
+
+AgenticChatbot/scripts/email_reminder.py
+AgenticChatbot/scripts/predict_payment_date.py
+.env
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
+
 
 # C extensions
 *.so
@@ -604,3 +609,7 @@ FodyWeavers.xsd
 **/appsettings.Local.json
 /AgenticChatbot/*.env
 /AgenticAPI/AgenticAPI/appsettings.Development.json
+/AgenticAPI/AgenticAPI/appsettings.Development.json
+
+qdrant
+docs

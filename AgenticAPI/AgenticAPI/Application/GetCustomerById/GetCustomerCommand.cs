@@ -9,7 +9,7 @@ namespace AgenticAPI.Application.GetCustomerById
 {
     public class GetCustomerCommand: IRequestHandler<GetCustomerRawRequestModel, GetCustomerResponseModel>
     {
-        public IMongoService _mongoService;
+        private readonly IMongoService _mongoService;
 
         public GetCustomerCommand(IMongoService mongoService)
         {
