@@ -8,14 +8,14 @@ from typing import List, Dict, Any
 from langchain_core.runnables import RunnableConfig
 from uuid import uuid4
 import asyncio
-
+from services.pdf_generation import generate_pdf_bytes, generate_excel_bytes
+import re
 from graph import build_model, invoke_model
 from speech_processing import recognize_from_microphone, text_to_microphone
-from chat_logic import *
+from services.chat_logic import *
 from utils import chat_title_generation
 from datetime import datetime, timezone
 
-from pdf_generation import generate_loan_statement_pdf
 from utils import ivr_message_generation
 
 
@@ -38,7 +38,8 @@ async def stream_output_with_audio(content):
     ivr_message = ivr_message_generation(content)
     await asyncio.gather(
         text_to_microphone(ivr_message),
-        stream_text_output(content)
+        stream_text_output(content),
+        return_exceptions= False
     )
 
 async def load_messages(messages: List[Dict[str, Any]]):
@@ -97,6 +98,22 @@ async def handle_prompt(prompt: str):
     st.rerun()
 
 
+
+def parse_markdown_table(md_table: str):
+    lines = [line.strip() for line in md_table.strip().splitlines() if line.strip()]
+    # Remove separator lines like: |-----|------|
+    lines = [line for line in lines if not set(line) <= {'|', '-', ' '}]
+    if not lines:
+        return []
+    header = [h.strip() for h in lines[0].strip('|').split('|')]
+    data_rows = []
+    for line in lines[1:]:
+        cols = [c.strip() for c in line.strip('|').split('|')]
+        if len(cols) == len(header):
+            data_rows.append(dict(zip(header, cols)))
+    return data_rows
+
+
 async def run_app():
     validated = None
     if "state" in st.session_state:
@@ -136,16 +153,31 @@ async def run_app():
                 msg["to_stream"] = False
             else:
                 st.markdown(content)
-                
+
+
             if validated and role == "assistant" and "Here is your loan statement" in content:
-                pdf_bytes = generate_loan_statement_pdf(st.session_state.state["customer"]["customerId"])
-                st.download_button(
-                    label="Download PDF",
-                    data=pdf_bytes,
-                    file_name="loan_statement.pdf",
-                    mime="application/pdf",
-                    key=f"loan_pdf_{i}"
-                )
+                table_match = re.search(r"(\| No\..*?)(\n\n|$)", content, re.DOTALL)
+                if table_match:
+                    md_table = table_match.group(1)
+                    payments = parse_markdown_table(md_table)
+                    summary_part = content.split("| No.")[0].strip()
+                    if payments:
+                        pdf_bytes = generate_pdf_bytes(payments)
+                        st.download_button(
+                            label="Download PDF",
+                            data=pdf_bytes,
+                            file_name="loan_statement.pdf",
+                            mime="application/pdf",
+                            key=f"loan_pdf_{i}"
+                        )
+                        excel_bytes = generate_excel_bytes(payments)
+                        st.download_button(
+                            label="Download Excel",
+                            data=excel_bytes,
+                            file_name="loan_statement.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            key=f"loan_excel_{i}"
+                        )
 
     
     if st.session_state.state["validated"] is None and len(st.session_state.state["messages"]) == 0:
