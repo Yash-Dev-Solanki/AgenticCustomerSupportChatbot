@@ -6,12 +6,12 @@ from services.loan_service import fetch_loan_statement
 from datetime import datetime
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 from pydantic import SecretStr
 import os
 import json
 
-load_dotenv()
+load_dotenv(find_dotenv())
 llm = ChatOpenAI(
     model="gpt-4o",
     temperature=0,
@@ -92,4 +92,4 @@ def get_loan_statement(
     ])
 
     chain = prompt | llm
-    return chain.invoke({"input": json.dumps(loan_input)})
+    return chain.invoke({"input": json.dumps(loan_input)})  # type: ignore

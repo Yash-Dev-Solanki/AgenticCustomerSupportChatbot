@@ -40,7 +40,7 @@ def update_customer_email(customer_id: str, email_address: str, tool_call_id: An
         tool_message = ToolMessage(content= tool_content, tool_call_id= tool_call_id)
         command = Command(update= {
             "messages": state['messages'] + [tool_message],
-            "customer": customer,
+            "customer": customer.model_dump(mode= 'json'),
         })
     else:
         status = response.status_code
@@ -79,7 +79,7 @@ def update_customer_payment_reminder(customer_id: str, payment_reminder: bool, t
         tool_message = ToolMessage(content= tool_content, tool_call_id= tool_call_id)
         command = Command(update= {
             "messages": state['messages'] + [tool_message],
-            "customer": customer,
+            "customer": customer.model_dump(mode= 'json'),
         })
     else:
         print("Not updated")
