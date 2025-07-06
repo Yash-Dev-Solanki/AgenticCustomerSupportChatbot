@@ -77,14 +77,20 @@ namespace AgenticAPI.Infrastructure
             }
         }
 
-        public async Task<bool> CheckCustomerExists(string customerId)
+        public async Task<string?> CheckCustomerExists(string? customerId, string? SSN)
         {
             try
             {
-                var filter = Builders<BsonDocument>.Filter.Eq("CustomerId", customerId);
-                var count = await _accountsCollection.CountDocumentsAsync(filter);
+                var filter = Builders<BsonDocument>.Filter.Or(
+                    Builders<BsonDocument>.Filter.Eq("CustomerId", customerId),
+                    Builders<BsonDocument>.Filter.Eq("SSN", SSN)
+                );
+                var account = await _accountsCollection.Find(filter).FirstOrDefaultAsync();
 
-                return count == 1;
+                if (account != null)
+                    return account["CustomerId"].AsString;
+                else
+                    return null;
             }
             catch (Exception ex)
             {

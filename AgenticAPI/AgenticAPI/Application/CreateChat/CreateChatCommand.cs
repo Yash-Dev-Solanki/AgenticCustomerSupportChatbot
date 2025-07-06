@@ -23,8 +23,8 @@ namespace AgenticAPI.Application.CreateChat
             try
             {
                 // Check if custmer Id is valid
-                bool validCustomerId = await _accountsService.CheckCustomerExists(request.CustomerId);
-                if (!validCustomerId)
+                var validCustomerId = await _accountsService.CheckCustomerExists(request.CustomerId, null);
+                if (validCustomerId == null)
                 {
                     response.Success = true;
                     response.StatusCode = System.Net.HttpStatusCode.BadRequest;

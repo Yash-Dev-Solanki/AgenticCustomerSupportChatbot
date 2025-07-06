@@ -30,6 +30,7 @@ def verify_customer_id(customer_id: str, phoneInfoLastFourDigits: str, tool_call
 
     if response.status_code == 200:
         customer = Customer(**response.json()['customer'])
+        print(customer.model_dump(mode='json'))
         tool_content = f"The customer was successfully validated. Name: {customer.customerName} with CustomerId: {customer.customerId}"
         tool_message = ToolMessage(content= tool_content, tool_call_id=tool_call_id)
         

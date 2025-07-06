@@ -51,7 +51,7 @@ def recognize_from_microphone():
 async def text_to_microphone(text: str):
     audio_config = speechsdk.audio.AudioOutputConfig(use_default_speaker= True)
     speech_config = speechsdk.SpeechConfig(subscription= speech_key, endpoint= speech_endpoint)
-    speech_config.speech_synthesis_voice_name= 'en-US-AvaMultilingualNeural'
+    speech_config.speech_synthesis_voice_name= 'en-US-JennyNeural'
     
     speech_synthesier = speechsdk.SpeechSynthesizer(speech_config= speech_config, audio_config= audio_config)
 
@@ -64,6 +64,5 @@ async def text_to_microphone(text: str):
         cancellation_details = speech_synthesis_result.cancellation_details
         if cancellation_details.reason == speechsdk.CancellationReason.Error:
             print(f"Error details: {cancellation_details.error_details}")
-
     
     

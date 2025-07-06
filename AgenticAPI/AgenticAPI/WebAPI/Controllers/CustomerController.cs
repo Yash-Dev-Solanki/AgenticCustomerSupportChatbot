@@ -89,15 +89,27 @@ namespace AgenticAPI.WebAPI.Controllers
         }
 
         [HttpGet("CheckCustomer")]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         [ActionName("CheckCustomerExists")]
-        public async Task<IActionResult> CheckCustomerExists([FromHeader][Required] string customerId)
+        public async Task<IActionResult> CheckCustomerExists([FromHeader] string? customerId, [FromHeader] string? SSN)
         {
+            if (String.IsNullOrEmpty(customerId) && String.IsNullOrEmpty(SSN))
+            {
+                return BadRequest(new
+                {
+                    Errors = new List<string>
+                    {
+                        "Either CustomerId or SSN must be provided."
+                    }
+                });
+            }
+            
             try
             {
-                var request = new CheckCustomerRequestModel { CustomerId = customerId };
+                var request = new CheckCustomerRequestModel { CustomerId = customerId, SSN = SSN };
                 var response = await _mediator.Send(request);
 
                 if (response.StatusCode == HttpStatusCode.OK)

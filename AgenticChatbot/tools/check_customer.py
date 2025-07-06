@@ -9,22 +9,24 @@ import urllib3
 urllib3.disable_warnings()
 
 @tool(parse_docstring= True)
-def check_customer_id(customer_id: str) -> Union[bool, str]:
+def check_customer(customer_id: str= "", SSN: str= "") -> str:
     """
     Checks if the provided customer ID is present in the customer database.
     
     Args:
-        customer_id (str): The customer ID to validate.
+        customer_id (str): The customer ID to validate. 
+        SSN (str): The Social Security Number to validate. 
     """
 
     context = ssl.create_default_context(cafile= certifi.where())
-    headers = {"customerId": customer_id}
-    response = requests.get(Endpoints.CHECK_CUSTOMER_ID, headers= headers, verify= False)
+    headers = {"customerId": customer_id, "SSN": SSN}
+    response = requests.get(Endpoints.CHECK_CUSTOMER, headers= headers, verify= False)
+    data = response.json()
 
     if response.status_code == 200:
-        return True
+        return f"Customer was successfully validated. The customerId is {data['customerId']}"
     elif response.status_code == 404:
-        return False
+        return "Customer ID not found in the database. Please check the provided customer ID and SSN."
     else:
         status = response.status_code
         errors = '\t'.join(response.json().get('errors', ['Unknown error']))

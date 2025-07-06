@@ -1,5 +1,6 @@
 from typing import Annotated, Dict, Any
 from langchain_core.tools import tool, InjectedToolCallId
+from langchain_core.messages import ToolMessage
 from langgraph.prebuilt import InjectedState
 from dateutil.parser import isoparse
 from services.loan_service import fetch_loan_statement
@@ -10,6 +11,8 @@ from dotenv import load_dotenv, find_dotenv
 from pydantic import SecretStr
 import os
 import json
+from langchain_core.output_parsers import StrOutputParser
+from langgraph.types import Command
 
 load_dotenv(find_dotenv())
 llm = ChatOpenAI(
@@ -19,11 +22,11 @@ llm = ChatOpenAI(
     api_key=SecretStr(os.getenv('OPENAI_API_KEY', ''))
 )
 
-@tool(parse_docstring=True, return_direct=True)
+@tool(parse_docstring= True)
 def get_loan_statement(
     tool_call_id: Annotated[str, InjectedToolCallId],
     state: Annotated[Dict[str, Any], InjectedState],
-) -> str:
+) -> Command:
     """
     Fetch and return the loan statement for the current customer using LLM formatting.
     Includes a Markdown table for display and raw JSON array for backend use.
@@ -31,9 +34,6 @@ def get_loan_statement(
     Args:
         tool_call_id (str): Tool call ID injected by LangGraph.
         state (Dict[str, Any]): Current LangGraph state with customerId.
-
-    Returns:
-        str: A formatted loan statement with summary, Markdown table, and raw JSON array.
     """
     print("Transferred to loan_statement_tool")
 
@@ -46,10 +46,14 @@ def get_loan_statement(
                 p.paymentDate = isoparse(p.paymentDate)
 
     if not data.success:
-        return f"Could not fetch loan statement: {', '.join(data.errors or ['Unknown error'])}"
+        tool_message = ToolMessage(content= f"Could not fetch loan statement: {', '.join(data.errors or ['Unknown error'])}",
+                                   tool_call_id=tool_call_id)
+        return Command(update= {
+            "messages": state["messages"] + [tool_message]
+        })
+    
 
     print(f"Fetched loan statement for customer {data.customerId}")
-
     loan_input = {
         "customerId": data.customerId,
         "loanAccountNumber": data.loanAccountNumber,
@@ -83,7 +87,7 @@ def get_loan_statement(
         Given the following loan JSON data:
         1. Generate a loan summary in plain readable text (no markdown headers or bullet points).
         2. Then generate a payment history **Markdown table**.
-           Use columns: No., Date, EMI, Interest, Principal, Prev, Curr, Mode, Txn ID.
+           Use columns: No., Date, EMI, Interest, Principal, Previous Principal, Current Principal, Mode, Txn ID.
         3. After the table, on a new line, include only the **raw JSON array** of payment records.
            Do not explain or format the JSON in any way.
         4. All currency must be formatted as US dollars (e.g. $10,000.00).
@@ -91,5 +95,16 @@ def get_loan_statement(
         ("human", "{input}")
     ])
 
-    chain = prompt | llm
-    return chain.invoke({"input": json.dumps(loan_input)})  # type: ignore
+    
+    chain = prompt | llm | StrOutputParser()
+    result = chain.invoke({"input": json.dumps(loan_input)})  # type: ignore
+    tool_message = ToolMessage(
+        content = result,
+        tool_call_id =tool_call_id
+    )
+
+    # Update state with the generated content  & set generation flag to true
+    return Command(update = {
+        "messages": state["messages"] + [tool_message],
+        "loan_statement_generation": True,
+    })

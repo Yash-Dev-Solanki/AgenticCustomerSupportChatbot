@@ -44,8 +44,6 @@ namespace AgenticAPI.Application.CreateCustomer
         {
             Customer customer = _mapper.Map<Customer>(request);
             customer.CustomerId = await GenerateCustomerId();
-            customer.Notes = new List<string>();
-            customer.Notes.Add($"Customer created successfully at {customer.CreatedOn}");
             var result = await _mongoService.AddCustomer(customer);
 
             var response = new CreateCustomerResponseModel();

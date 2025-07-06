@@ -1,7 +1,7 @@
 class Endpoints:
     GET_CUSTOMER_BY_ID = "https://localhost:7260/api/Customer"
 
-    CHECK_CUSTOMER_ID = "https://localhost:7260/api/Customer/CheckCustomer"
+    CHECK_CUSTOMER = "https://localhost:7260/api/Customer/CheckCustomer"
 
     VERIFY_CUSTOMER_ID = "https://localhost:7260/api/Customer/VerifyCustomer"
     

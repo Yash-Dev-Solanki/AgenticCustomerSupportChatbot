@@ -13,3 +13,4 @@ class GraphState(AgentState):
     validated: Optional[bool]
     validation_retries: int
     current_retries: int
+    loan_statement_generation: bool

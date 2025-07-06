@@ -17,11 +17,12 @@ namespace AgenticAPI.Application.CheckCustomerById
             var response = new CheckCustomerResponseModel();
             try
             {
-                var result = await _mongoService.CheckCustomerExists(request.CustomerId);
+                var resultCustomerId = await _mongoService.CheckCustomerExists(request.CustomerId, request.SSN);
 
-                if (result == true)
+                if (resultCustomerId != null)
                 {
                     response.Success = true;
+                    response.CustomerId = resultCustomerId;
                     response.StatusCode = System.Net.HttpStatusCode.OK;
                     response.CustomerExists = true;
                 }

@@ -1,6 +1,5 @@
 import time
 from dotenv import load_dotenv
-import os
 import streamlit as st
 import streamlit_extras.stateful_button as stx
 from langchain_core.messages import HumanMessage, AIMessage
@@ -13,10 +12,8 @@ import re
 from graph import build_model, invoke_model
 from speech_processing import recognize_from_microphone, text_to_microphone
 from services.chat_logic import *
-from utils import chat_title_generation
+from utils import *
 from datetime import datetime, timezone
-
-from utils import ivr_message_generation
 
 
 async def stream_text_output(text: str):
@@ -29,7 +26,7 @@ async def stream_text_output(text: str):
     for char in text:
         displayed_text += char
         message_placeholder.markdown(displayed_text + "▌")  # add cursor for effect
-        time.sleep(0.02)  # use time.sleep for Streamlit, not asyncio
+        time.sleep(0.04)  # use time.sleep for Streamlit, not asyncio
 
     message_placeholder.markdown(displayed_text)  # remove cursor
 
@@ -81,7 +78,15 @@ async def handle_prompt(prompt: str):
     response = invoke_model(model, input_state= st.session_state.state, config= config)
     ai_msg = response["messages"][-1]
     st.session_state.state = response
-    st.session_state.messages.append({"role": "assistant", "content": ai_msg.content, "to_stream": True})
+    st.session_state.messages.append({
+        "role": "assistant", 
+        "content": ai_msg.content, 
+        "to_stream": True,
+        "statement_generation": response.get("loan_statement_generation", False)
+    })
+
+    # Reset statement generation flag
+    st.session_state.state["loan_statement_generation"] = False
 
     if st.session_state.state["validated"] == True and st.session_state["current_chat"] is not None:
         messages_to_add.append({
@@ -96,22 +101,6 @@ async def handle_prompt(prompt: str):
         )
         
     st.rerun()
-
-
-
-def parse_markdown_table(md_table: str):
-    lines = [line.strip() for line in md_table.strip().splitlines() if line.strip()]
-    # Remove separator lines like: |-----|------|
-    lines = [line for line in lines if not set(line) <= {'|', '-', ' '}]
-    if not lines:
-        return []
-    header = [h.strip() for h in lines[0].strip('|').split('|')]
-    data_rows = []
-    for line in lines[1:]:
-        cols = [c.strip() for c in line.strip('|').split('|')]
-        if len(cols) == len(header):
-            data_rows.append(dict(zip(header, cols)))
-    return data_rows
 
 
 async def run_app():
@@ -136,13 +125,13 @@ async def run_app():
             "messages": [],
             "validation_retries": 3,
             "current_retries": 0,
+            "loan_statement_generation": False
         }
     if "messages" not in st.session_state:
         st.session_state.messages = []
     if "current_chat" not in st.session_state:
         st.session_state.current_chat = None
     
-
     for i, msg in enumerate(st.session_state.messages):
         role = msg.get("role")
         content = msg.get("content")
@@ -155,12 +144,11 @@ async def run_app():
                 st.markdown(content)
 
 
-            if validated and role == "assistant" and "Here is your loan statement" in content:
+            if msg.get("statement_generation", False):
                 table_match = re.search(r"(\| No\..*?)(\n\n|$)", content, re.DOTALL)
                 if table_match:
                     md_table = table_match.group(1)
                     payments = parse_markdown_table(md_table)
-                    summary_part = content.split("| No.")[0].strip()
                     if payments:
                         pdf_bytes = generate_pdf_bytes(payments)
                         st.download_button(
@@ -178,7 +166,7 @@ async def run_app():
                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                             key=f"loan_excel_{i}"
                         )
-
+                
     
     if st.session_state.state["validated"] is None and len(st.session_state.state["messages"]) == 0:
         await handle_prompt("")
@@ -233,10 +221,6 @@ async def run_app():
 
 if __name__ == "__main__":
     load_dotenv()
-    openai_key = os.getenv("OPENAI_API_KEY")
-
-    if not openai_key:
-        raise Exception("API Key not set in environment variables")
 
     model = build_model()
     config = RunnableConfig({"configurable": {"thread_id": str(uuid4())}})

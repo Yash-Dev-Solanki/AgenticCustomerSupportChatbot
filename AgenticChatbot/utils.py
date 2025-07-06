@@ -93,3 +93,19 @@ def ivr_message_generation(content: str) -> str:
     return chain.invoke({"content": content}).strip()
 
 
+
+def parse_markdown_table(md_table: str):
+    lines = [line.strip() for line in md_table.strip().splitlines() if line.strip()]
+    # Remove separator lines like: |-----|------|
+    lines = [line for line in lines if not set(line) <= {'|', '-', ' '}]
+    if not lines:
+        return []
+    header = [h.strip() for h in lines[0].strip('|').split('|')]
+    data_rows = []
+    for line in lines[1:]:
+        cols = [c.strip() for c in line.strip('|').split('|')]
+        if len(cols) == len(header):
+            data_rows.append(dict(zip(header, cols)))
+    return data_rows
+
+

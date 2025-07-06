@@ -16,14 +16,11 @@ class PhoneInfo(BaseModel):
 
 class Customer(BaseModel):
     customerId: str
+    ssn: str
     customerName: str
-    paymentMethod: str
     createdOn: datetime
-    nextPayment: datetime
-    finalPayment: datetime
     address: Address
     emailAddress: str
     phoneInfo: PhoneInfo
     paymentReminder: bool
-    notes: list[str]
 

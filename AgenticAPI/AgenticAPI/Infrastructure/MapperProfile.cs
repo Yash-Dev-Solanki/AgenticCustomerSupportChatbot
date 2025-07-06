@@ -9,7 +9,6 @@ namespace AgenticAPI.Infrastructure
         public MapperProfile() 
         {
             CreateMap<CreateCustomerRawRequestModel, Customer>()
-                .ForMember(dest => dest.PaymentMethod, opt => opt.MapFrom(src => src.PaymentMethod.ToString()))
                 .ReverseMap();
         }
     }
