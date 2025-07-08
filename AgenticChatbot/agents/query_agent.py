@@ -20,6 +20,9 @@ model = ChatOpenAI(model= "gpt-4o",
 process_profile_query = profile_query_handler.get_profile_query_handler()
 process_payments_query = payments_query_handler.get_payments_query_handler()
 
+print("Profile Query Handler:", process_profile_query)
+print("Payments Query Handler:", process_payments_query)
+
 def get_query_agent() -> CompiledGraph:
     query_agent = create_react_agent(
         model= model, 

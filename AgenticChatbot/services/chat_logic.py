@@ -2,6 +2,7 @@ import aiohttp
 from datetime import datetime
 from typing import List, Dict, Any
 from endpoints import Endpoints
+from dateutil.parser import parse
 
 
 async def fetch_all_chats_by_customer_id(customer_id: str) -> List[Dict[str, Any]]:
@@ -21,7 +22,7 @@ async def fetch_all_chats_by_customer_id(customer_id: str) -> List[Dict[str, Any
                     chats = data.get('chats', [])
                     sorted_chats = sorted(
                         chats, 
-                        key= lambda x: datetime.fromisoformat(x['createdAt'].replace('Z', '+00:00')), 
+                        key=lambda x: x.get('createdAt', ''),
                         reverse=True
                     )
 

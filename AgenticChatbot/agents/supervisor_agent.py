@@ -78,8 +78,8 @@ def get_supervisor_agent(members: List[str]) -> CompiledGraph:
             - Update Agent: Updates customer data in the collection.
             - Query Agent: Retrieves answers to user queries from policy documents.
             - Summary Agent: Summarizes and explains operations performed over the past week and answers related user questions.
-            - Loan Statement Agent: Provides loan statements to users, optionally filtered by date range.
-            - Loan Management Agent: Handles user loan inquiries and actions.
+            - Loan Statement Agent: Provides loan statements to users
+            - Loan Management Agent: Handles user loan inquiries and actions like outstanding balance,tenure reduction,part payment and loan closure. 
 
             Guidelines:
             1. Do not perform any tasks yourself; always delegate to the appropriate agent.

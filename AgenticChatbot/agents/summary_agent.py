@@ -1,3 +1,4 @@
+
 from langchain_core.tools import tool
 from langgraph.prebuilt import create_react_agent, InjectedState
 from langchain_openai import ChatOpenAI
@@ -198,7 +199,3 @@ def get_summary_agent() -> CompiledGraph:
     )
 
     return agent
-
-
-
-

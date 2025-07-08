@@ -25,6 +25,7 @@ def verify_customer_id(customer_id: str, phoneInfoLastFourDigits: str, tool_call
     """
 
     context = ssl.create_default_context(cafile= certifi.where())
+    print(f"Validating customer id {customer_id} with phone last four digits {phoneInfoLastFourDigits}")
     headers = {"customerId": customer_id, "phoneInfoLastFourDigits": phoneInfoLastFourDigits}
     response = requests.get(Endpoints.VERIFY_CUSTOMER_ID, headers= headers, verify=False)
 

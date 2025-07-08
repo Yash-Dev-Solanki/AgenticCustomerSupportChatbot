@@ -5,7 +5,6 @@ from dotenv import load_dotenv
 from azure.cognitiveservices import speech as speechsdk
 import asyncio
 
-
 load_dotenv()
 speech_key = os.getenv("SPEECH_KEY")
 speech_endpoint = os.getenv("SPEECH_ENDPOINT")

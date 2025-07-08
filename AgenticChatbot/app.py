@@ -26,7 +26,7 @@ async def stream_text_output(text: str):
     for char in text:
         displayed_text += char
         message_placeholder.markdown(displayed_text + "▌")  # add cursor for effect
-        time.sleep(0.04)  # use time.sleep for Streamlit, not asyncio
+        time.sleep(0.02)  # use time.sleep for Streamlit, not asyncio
 
     message_placeholder.markdown(displayed_text)  # remove cursor
 
@@ -101,7 +101,6 @@ async def handle_prompt(prompt: str):
         )
         
     st.rerun()
-
 
 async def run_app():
     validated = None

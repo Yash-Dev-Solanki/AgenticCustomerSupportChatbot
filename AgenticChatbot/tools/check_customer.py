@@ -19,10 +19,11 @@ def check_customer(customer_id: str= "", SSN: str= "") -> str:
     """
 
     context = ssl.create_default_context(cafile= certifi.where())
+    print(f"Checking customer with ID: {customer_id} and SSN: {SSN}")
     headers = {"customerId": customer_id, "SSN": SSN}
-    response = requests.get(Endpoints.CHECK_CUSTOMER, headers= headers, verify= False)
+    response = requests.get(Endpoints.CHECK_CUSTOMER_ID, headers= headers, verify= False)
     data = response.json()
-
+    print(f"Response from check_customer: {data}")
     if response.status_code == 200:
         return f"Customer was successfully validated. The customerId is {data['customerId']}"
     elif response.status_code == 404:

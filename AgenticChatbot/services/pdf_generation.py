@@ -24,8 +24,8 @@ def generate_pdf_bytes(payments: list) -> bytes:
             p.get("Principal", ""),
             p.get("Previous Principal", ""),
             p.get("Current Principal", ""),
-            p.get("Mode", ""),
-            p.get("Txn ID", "")
+            p.get("Payment Mode") or p.get("Mode") or "-",
+            p.get("Transaction ID", "")
         ]
         for value, width in zip(row_values, col_widths):
             pdf.cell(width, 12, str(value), 1)
@@ -36,9 +36,14 @@ def generate_pdf_bytes(payments: list) -> bytes:
 
 def generate_excel_bytes(payments: list) -> bytes:
     df = pd.DataFrame(payments)
-    columns_order = ["No.","Date", "EMI", "Interest", "Principal", "Previous Principal",
-                     "Current Principal", "Mode", "Txn ID"]
-    df = df[columns_order]
+    if 'Payment Mode' in df.columns:
+        df = df.rename(columns={'Payment Mode': 'Mode'})
+
+    columns_order = ["Date", "EMI", "Interest", "Principal", "Previous Principal",
+                     "Current Principal", "Mode", "Transaction ID"]
+    columns_order_filtered = [col for col in columns_order if col in df.columns]
+
+    df = df[columns_order_filtered]
 
     buffer = BytesIO()
     df.to_excel(buffer, index=False)
